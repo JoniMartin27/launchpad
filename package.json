@@ -1,0 +1,23 @@
+{
+  "name": "mission-control",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-only developer dashboard to discover, launch, monitor, and kill personal dev servers.",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c green,cyan \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm -w server run dev",
+    "dev:web": "npm -w web run dev",
+    "start": "npm -w server run start",
+    "build": "npm -w web run build",
+    "serve": "npm -w server run start",
+    "test": "npm -w server test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+web/dist/
+*.log
+.DS_Store
+
+# Machine-local runtime config (generated on first run from a fresh scan).
+# Ship config.example.json instead; never commit a personal project map.
+config.json
+config.json.tmp
+config.json.bak
+
+# Local editor / tooling
+.claude/
+.vscode/
+.idea/

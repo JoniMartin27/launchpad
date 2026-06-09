@@ -1,0 +1,23 @@
+{
+  "$schemaVersion": 1,
+  "settings": {
+    "projectsRoot": "",
+    "dashboardPort": 7777,
+    "portRange": { "start": 4000, "end": 4099 },
+    "ringBytes": 262144,
+    "metricsTtlSec": 60,
+    "autoScan": true,
+    "readyRegex": "ready in|listening on|Local:\\s+http|started server|compiled|running at"
+  },
+  "projects": {
+    "my-app": {
+      "port": 4000,
+      "name": "My App",
+      "command": "npm run dev",
+      "portFlag": "--port",
+      "portEnv": "PORT",
+      "env": { "SOME_VAR": "value" },
+      "hidden": false
+    }
+  }
+}

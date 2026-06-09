@@ -1,0 +1,102 @@
+/*
+ * Mission Control — Design Tokens (DESIGN.md §1, authoritative).
+ * Dark-theme-first. Every component references these by variable, never by
+ * literal hex. Accent is a single-variable swap (--accent + derivatives).
+ * No external fonts/icons — bundled/system stack + Unicode glyphs (SPEC §0).
+ */
+:root {
+  /* ---------- Neutral ramp: "Slate" (blue-leaning near-black) ---------- */
+  --slate-0: #0b0d10; /* app background (deepest)              */
+  --slate-1: #101316; /* card background                       */
+  --slate-2: #161a1f; /* raised card / hover / drawer inner panel */
+  --slate-3: #1e232a; /* popover, modal, input                 */
+  --slate-4: #272d35; /* borders (solid contexts only)         */
+  --slate-5: #3a424d; /* hairline dividers on light surfaces   */
+  --slate-6: #5a636f; /* disabled text, faint icons, idle dot  */
+  --slate-7: #8a929e; /* secondary text, paths, captions       */
+  --slate-8: #b6bdc7; /* primary body text                     */
+  --slate-9: #edf0f4; /* headings, high-emphasis               */
+
+  /* ---------- Borders are ALPHA (sit correctly on any elevation) ------- */
+  --border-rest: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.1);
+  --border-focus: rgba(255, 255, 255, 0.14);
+
+  /* ---------- Accent: "Aurora" (cyan-teal — NOT status-green) ---------- */
+  --accent: #2dd4bf;
+  --accent-bright: #5eead4;
+  --accent-contrast: #04201e;
+  --accent-muted: #1c7a82;
+  --accent-subtle: #0e2a2e;
+  --accent-ring: rgba(45, 212, 191, 0.14);
+
+  /* ---------- Status: color + (paired with) shape + motion ------------- */
+  --status-idle: #5a636f;   --status-idle-dim: rgba(90, 99, 111, 0.55);   --status-idle-glow: rgba(90, 99, 111, 0);
+  --status-warn: #f5b544;   --status-warn-dim: rgba(245, 181, 68, 0.65);  --status-warn-glow: rgba(245, 181, 68, 0.3);
+  --status-ok: #34d399;     --status-ok-dim: rgba(52, 211, 153, 0.6);     --status-ok-glow: rgba(52, 211, 153, 0.32);
+  --status-err: #f87171;    --status-err-dim: rgba(248, 113, 113, 0.7);   --status-err-glow: rgba(248, 113, 113, 0.35);
+  --status-info: #60a5fa;   --status-info-dim: rgba(96, 165, 250, 0.6);   --status-info-glow: rgba(96, 165, 250, 0.28);
+
+  /* ---------- Project-TYPE hues (badge + corner-whisper ONLY) ---------- */
+  --type-web: #a78bfa;
+  --type-api: #38bdf8;
+  --type-worker: #fb923c;
+  --type-db: #fb7185;
+  --type-cli: #a3e635;
+  --type-docs: #2a9d8f;
+
+  /* ---------- Spacing scale (4px base) -------------------------------- */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px;
+
+  /* ---------- Radii (nested-radius math: inner = outer − pad) --------- */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+
+  /* ---------- Shadows (soft, layered — physical "key" elevation) ----- */
+  --shadow-rest: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.25);
+  --shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.45), 0 14px 36px rgba(0, 0, 0, 0.34);
+  --shadow-low: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-drawer: 0 8px 16px rgba(0, 0, 0, 0.45), 0 32px 80px rgba(0, 0, 0, 0.5);
+  --shadow-toast: 0 4px 8px rgba(0, 0, 0, 0.4), 0 20px 48px rgba(0, 0, 0, 0.45);
+
+  /* ---------- Typography --------------------------------------------- */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'SF Mono', ui-monospace, Consolas, monospace;
+  --fs-display: 22px; --lh-display: 28px; --fw-display: 600;
+  --fs-title: 16px;   --lh-title: 22px;   --fw-title: 600;
+  --fs-body: 14px;    --lh-body: 20px;    --fw-body: 400;
+  --fs-label: 13px;   --lh-label: 18px;   --fw-label: 500;
+  --fs-caption: 12px; --lh-caption: 16px; --fw-caption: 400;
+  --fs-mono: 12.5px;  --lh-mono: 18px;
+  --num: 'tnum' 1, 'lnum' 1;
+
+  /* ---------- Motion: easing + durations ----------------------------- */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-drawer: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-press: cubic-bezier(0.4, 0, 1, 1);
+  --dur-press: 90ms;
+  --dur-fast: 120ms;
+  --dur-base: 160ms;
+  --dur-hover: 220ms;
+  --dur-drawer: 320ms;
+  --dur-spark: 400ms;
+  --stagger: 30ms;
+
+  /* ---------- Z-index ------------------------------------------------- */
+  --z-topbar: 100;
+  --z-drawer-scrim: 200;
+  --z-drawer: 210;
+  --z-toast: 300;
+  --z-cmdk: 400;
+
+  /* ---------- Layout ------------------------------------------------- */
+  --page-max: 1280px;
+  --page-gutter: var(--sp-6);
+  --grid-gutter: var(--sp-5);
+  --topbar-h: 64px;
+  --drawer-w: 520px;
+}
