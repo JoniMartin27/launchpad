@@ -1,13 +1,19 @@
 # 🛰️ Mission Control
 
-**A local-first dashboard for all your side projects.** Point it at the folder
-where your repos live and it auto-detects every project, figures out how to start
-each one, and gives you a single place to launch them, watch their logs, and see
-their git status and health — without a single port collision.
+> One folder, a dozen repos, one screen — no port collisions.
 
-> Local-only by design. The server binds to **`127.0.0.1` only** (HTTP + WebSocket),
-> never `0.0.0.0`. Nothing is exposed to your network. No accounts, no telemetry,
-> no cloud.
+Point Mission Control at the folder where you keep your projects and press start.
+It auto-detects every dev project, infers how to launch each one from its *own*
+files, and runs them all at once on collision-free ports — with live logs, git
+status, and health in a single view. No `cd` rituals, no port-clash detective
+work, no stray `node` holding port 5173 from yesterday.
+
+<p align="center">
+  <img src="docs/screenshot.png" alt="Mission Control dashboard — projects grid with live logs, git, and health" width="900">
+</p>
+
+> 🔒 **Local-only by design.** Binds **`127.0.0.1`** (HTTP + WebSocket), never
+> `0.0.0.0`. No accounts, no telemetry, no phone-home.
 
 ## Why
 
