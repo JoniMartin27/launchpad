@@ -9,7 +9,7 @@ status, and health in a single view. No `cd` rituals, no port-clash detective
 work, no stray `node` holding port 5173 from yesterday.
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="Mission Control dashboard — projects grid with live logs, git, and health" width="900">
+  <img src="docs/demo.gif" alt="Mission Control — launch two projects on collision-free ports and watch live logs in the detail drawer" width="900">
 </p>
 
 > 🔒 **Local-only by design.** Binds **`127.0.0.1`** (HTTP + WebSocket), never
