@@ -120,6 +120,8 @@ const wsProxy = {
   broadcastStatus: (...a) => ws?.broadcastStatus(...a),
   broadcastWarning: (...a) => ws?.broadcastWarning(...a),
   broadcastCatalog: (...a) => ws?.broadcastCatalog(...a),
+  broadcastInstallLog: (...a) => ws?.broadcastInstallLog(...a),
+  broadcastInstall: (...a) => ws?.broadcastInstall(...a),
 };
 const launcher = new Launcher({ catalog, ws: wsProxy, settings });
 

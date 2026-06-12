@@ -205,7 +205,12 @@ export default function App() {
       } catch (e) {
         const err = e as ApiClientError;
         setLocalInstalling(id, false);
-        pushToast({ kind: 'error', projectId: id, title: `Couldn't install ${id}`, detail: err.message });
+        // A failed install (non-2xx) also arrives as a WS `install failed`
+        // event which toasts with the reason, so only surface transport-level
+        // failures here to avoid a duplicate error toast.
+        if (err.code === 'NETWORK') {
+          pushToast({ kind: 'error', projectId: id, title: `Couldn't install ${id}`, detail: err.message });
+        }
       } finally {
         setBusy(id, false);
       }
