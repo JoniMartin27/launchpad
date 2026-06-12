@@ -232,6 +232,15 @@ export function useProjects() {
           break;
         }
 
+        case 'catalog': {
+          // The server's live-discovery broadcast (file watcher + rescan/refresh
+          // routes) ships `type: 'catalog'` with id-only added/removed/changed
+          // diffs plus a full `projects` snapshot. Reconcile off the snapshot so
+          // an open dashboard reflects folders that appear/disappear on disk.
+          if (msg.projects) applySnapshot(msg.projects, { toast: true });
+          break;
+        }
+
         case 'rescan': {
           // Accept multiple shapes (DESIGN §3, backend in parallel).
           if (msg.projects) {

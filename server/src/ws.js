@@ -133,6 +133,35 @@ export class WsHub {
     this._broadcastAll(payload);
   }
 
+  /**
+   * Push a live install/setup log chunk to subscribers of `projectId`.
+   * Mirrors broadcastLog but carries `type: 'install.log'` so the UI routes it
+   * to the dedicated install-output panel instead of the runtime log stream.
+   */
+  broadcastInstallLog(projectId, stream, data) {
+    const payload = JSON.stringify({
+      type: 'install.log',
+      ts: nowIso(),
+      projectId,
+      stream,
+      data,
+    });
+    for (const [socket, subs] of this.clients) {
+      if (subs.has(projectId) && socket.readyState === socket.OPEN) {
+        socket.send(payload);
+      }
+    }
+  }
+
+  /**
+   * Push an install lifecycle event (started / done / failed) to ALL clients so
+   * cards can reflect the in-flight install and clear it on completion.
+   */
+  broadcastInstall(projectId, status, reason = null) {
+    const payload = JSON.stringify({ type: 'install', ts: nowIso(), projectId, status, reason });
+    this._broadcastAll(payload);
+  }
+
   /** Push a non-fatal warning toast to ALL clients. */
   broadcastWarning(projectId, code, message) {
     const payload = JSON.stringify({ type: 'warning', ts: nowIso(), projectId, code, message });

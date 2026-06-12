@@ -383,7 +383,7 @@ export class Launcher {
     const ring = this.catalog.ensureRing(id);
     const banner = `\n[mission-control] installing dependencies: ${cmd} ${args.join(' ')} (cwd: ${cwd})\n`;
     ring.push(banner);
-    this.ws.broadcastLog(id, 'stdout', banner);
+    this.ws.broadcastInstallLog(id, 'stdout', banner);
 
     let child;
     try {
@@ -391,13 +391,14 @@ export class Launcher {
     } catch (err) {
       const msg = `\n[mission-control] install failed to spawn: ${String(err.message || err)}\n`;
       ring.push(msg);
-      this.ws.broadcastLog(id, 'stderr', msg);
+      this.ws.broadcastInstallLog(id, 'stderr', msg);
       return { status: 500, body: { error: { code: 'SPAWN_FAILED', message: String(err.message || err) } } };
     }
 
-    // Mark a lightweight 'installing' runtime flag so the UI can show a spinner.
+    // Mark a lightweight 'installing' runtime flag so the UI can show a spinner,
+    // and announce the install lifecycle so cards reflect it (type: 'install').
     this.catalog.setStatus(id, { installing: true });
-    this.ws.broadcastStatus({ projectId: id, status: rt?.status || 'stopped', installing: true, pid: null, assignedPort: project.assignedPort ?? null, exitCode: null, reason: null });
+    this.ws.broadcastInstall(id, 'started');
 
     const stripStdout = makeAnsiStripper();
     const stripStderr = makeAnsiStripper();
@@ -406,7 +407,9 @@ export class Launcher {
       if (!text) return;
       ring.push(text);
       this.catalog.setLastLog(id, ring.lastLine());
-      this.ws.broadcastLog(id, stream, text);
+      // Install output flows on the dedicated install.log channel so the UI
+      // routes it to the "Install output" panel, not the runtime log stream.
+      this.ws.broadcastInstallLog(id, stream, text);
     };
     child.stdout?.on('data', pump('stdout', stripStdout));
     child.stderr?.on('data', pump('stderr', stripStderr));
@@ -415,18 +418,20 @@ export class Launcher {
       child.on('error', (err) => {
         const msg = `\n[mission-control] install error: ${String(err.message || err)}\n`;
         ring.push(msg);
-        this.ws.broadcastLog(id, 'stderr', msg);
+        this.ws.broadcastInstallLog(id, 'stderr', msg);
         this.catalog.setStatus(id, { installing: false });
+        this.ws.broadcastInstall(id, 'failed', String(err.message || err));
         resolve({ status: 500, body: { error: { code: 'SPAWN_FAILED', message: String(err.message || err) } } });
       });
       child.on('exit', (code) => {
         const ok = code === 0;
         const msg = `\n[mission-control] install ${ok ? 'completed' : `failed (exit ${code})`}\n`;
         ring.push(msg);
-        this.ws.broadcastLog(id, ok ? 'stdout' : 'stderr', msg);
+        this.ws.broadcastInstallLog(id, ok ? 'stdout' : 'stderr', msg);
         this.catalog.setStatus(id, { installing: false });
-        // Push a status refresh so cards re-read needsInstall.
-        this.ws.broadcastStatus({ projectId: id, status: this.catalog.getRuntime(id)?.status || 'stopped', installing: false, pid: null, assignedPort: project.assignedPort ?? null, exitCode: null, reason: null });
+        // Announce completion so cards clear the spinner and re-read needsInstall.
+        if (ok) this.ws.broadcastInstall(id, 'done');
+        else this.ws.broadcastInstall(id, 'failed', `install exited with code ${code}`);
         resolve({ status: ok ? 200 : 500, body: ok ? { ok: true, id, installer: cmd } : { error: { code: 'SPAWN_FAILED', message: `install exited with code ${code}` } } });
       });
     });

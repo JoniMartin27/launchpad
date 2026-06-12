@@ -207,6 +207,20 @@ export interface WsRescan {
   projects?: Project[];
 }
 
+/**
+ * Live-discovery broadcast emitted by the server (file watcher + rescan/refresh
+ * routes). `added`/`removed`/`changed` are id strings; `projects` is the full
+ * fresh snapshot the UI reconciles against.
+ */
+export interface WsCatalog {
+  type: 'catalog';
+  ts: string;
+  added?: string[];
+  removed?: string[];
+  changed?: string[];
+  projects?: Project[];
+}
+
 /** Live install/setup output (DESIGN §2). Streamed during POST .../install. */
 export interface WsInstallLog {
   type: 'install.log';
@@ -232,5 +246,6 @@ export type WsServerMessage =
   | WsWarning
   | WsPong
   | WsRescan
+  | WsCatalog
   | WsInstallLog
   | WsInstall;
