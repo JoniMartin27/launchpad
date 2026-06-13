@@ -291,6 +291,51 @@ function stripCaret(v) {
   return String(v).replace(/^[\^~>=<\s]+/, '');
 }
 
+// Files that mark a directory as a real, listable project. A folder with none
+// of these (and no own .git repo) is not a project — e.g. an orphaned
+// git-worktree shell that still holds a `node_modules/` after the worktree was
+// removed, or a stray scratch folder.
+const PROJECT_MARKERS = [
+  'package.json',
+  'index.html',
+  'pyproject.toml',
+  'requirements.txt',
+  'setup.py',
+  'go.mod',
+  'Cargo.toml',
+  'pom.xml',
+  'build.gradle',
+  'Gemfile',
+];
+
+/**
+ * A live git worktree has a `.git` *file* (not directory) that points at the
+ * parent repo. Such a folder is a checkout of another project, not a project of
+ * its own, so it should never surface as a standalone card.
+ * @param {string} dir
+ */
+function isGitWorktree(dir) {
+  try {
+    const g = path.join(dir, '.git');
+    return fs.existsSync(g) && fs.statSync(g).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Generic gate (no name matching): should this directory be listed as a project
+ * at all? Skip git worktrees; otherwise require either an own `.git` repo dir or
+ * at least one recognizable project-marker file. Filters stray folders and
+ * orphaned worktree shells (often just a lone `node_modules/`).
+ * @param {string} dir
+ */
+function isProjectDir(dir) {
+  if (isGitWorktree(dir)) return false;
+  if (isDir(path.join(dir, '.git'))) return true; // an intentional repo root
+  return PROJECT_MARKERS.some((m) => has(dir, m));
+}
+
 /**
  * Scan the projects root and return base discovered projects (pre-override).
  * @param {string} projectsRoot
@@ -310,6 +355,7 @@ export function scanFilesystem(projectsRoot) {
     if (SKIP_DIRS.has(ent.name)) continue;
     if (ent.name.endsWith('.git')) continue; // bare repo backups
     const dir = path.join(projectsRoot, ent.name);
+    if (!isProjectDir(dir)) continue; // skip worktrees / stray non-project folders
     const id = folderToId(ent.name);
     const det = detectProject(dir, id);
     out.push({

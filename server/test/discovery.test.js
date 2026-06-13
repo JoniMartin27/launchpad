@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { typeGroupForType, folderToId, discover } from '../src/discovery.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { typeGroupForType, folderToId, discover, scanFilesystem } from '../src/discovery.js';
 
 test('typeGroupForType buckets correctly', () => {
   assert.equal(typeGroupForType('vite-react'), 'Node');
@@ -35,6 +38,33 @@ test('discover assigns unique ports within range', () => {
   const { projects } = discover(config);
   // Nonexistent root → no projects, no throw.
   assert.ok(Array.isArray(projects));
+});
+
+test('scanFilesystem lists real projects but skips worktrees and stray folders', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-scan-'));
+  const mk = (rel, file, contents = '') => {
+    const d = path.join(root, rel);
+    fs.mkdirSync(d, { recursive: true });
+    if (file) fs.writeFileSync(path.join(d, file), contents);
+    return d;
+  };
+  try {
+    // Real projects — must be listed.
+    mk('real-app', 'package.json', JSON.stringify({ name: 'real-app', scripts: { dev: 'vite' } }));
+    mk('static-site', 'index.html', '<!doctype html>');
+    fs.mkdirSync(path.join(mk('repo-only', null), '.git')); // own repo root counts as a project
+
+    // Noise — must be skipped.
+    fs.mkdirSync(path.join(mk('wt-shell', null), 'node_modules')); // orphaned worktree shell (no markers)
+    const liveWt = mk('live-worktree', 'package.json', '{}');
+    fs.writeFileSync(path.join(liveWt, '.git'), 'gitdir: /repo/.git/worktrees/x'); // .git FILE = live worktree
+    mk('empty-dir', null);
+
+    const ids = scanFilesystem(root).map((p) => p.id).sort();
+    assert.deepEqual(ids, ['real-app', 'repo-only', 'static-site']);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('discover resolves seed ports and dedups clashes', () => {
