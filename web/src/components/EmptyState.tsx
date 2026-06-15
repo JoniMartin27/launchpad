@@ -7,10 +7,10 @@ export function FirstRunEmpty({ onAdd }: { onAdd: () => void }) {
       <div className="empty-logo">
         <BrandBlip />
       </div>
-      <h2>Nothing running yet.</h2>
+      <h2>Aún no arde nada.</h2>
       <p>
-        Mission Control watches your project folders and lights them up here. Point it at a folder to
-        begin.
+        Mission Control vigila tus carpetas de proyecto y las enciende aquí. Apúntalo a una carpeta
+        para empezar.
       </p>
       <button className="new-btn big" onClick={onAdd}>
         + Add a folder

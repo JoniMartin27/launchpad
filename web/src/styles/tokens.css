@@ -1,34 +1,40 @@
 /*
- * Mission Control — Design Tokens (DESIGN.md §1, authoritative).
- * Dark-theme-first. Every component references these by variable, never by
- * literal hex. Accent is a single-variable swap (--accent + derivatives).
- * No external fonts/icons — bundled/system stack + Unicode glyphs (SPEC §0).
+ * launchpad — Design Tokens · identidad de marca FERVON (forjado al rojo vivo).
+ * Tema "carbón + brasa": fondo carbón oscuro, texto hueso, acentos de fuego
+ * ember/ámbar. Cada componente referencia estas variables, nunca un hex literal,
+ * así que reteñir la paleta aquí re-viste todo el dashboard de un solo cambio.
+ * Sin fuentes/iconos externos — stack del sistema + glifos Unicode.
+ * Paleta canónica Fervon: --carbon #0E0B0A · --card #1A1310 · --line #2C211B
+ *   --ember #FF6A00 · --brasa #E0480F · --amber #FFB02E · --bone #EFE7DC.
  */
 :root {
-  /* ---------- Neutral ramp: "Slate" (blue-leaning near-black) ---------- */
-  --slate-0: #0b0d10; /* app background (deepest)              */
-  --slate-1: #101316; /* card background                       */
-  --slate-2: #161a1f; /* raised card / hover / drawer inner panel */
-  --slate-3: #1e232a; /* popover, modal, input                 */
-  --slate-4: #272d35; /* borders (solid contexts only)         */
-  --slate-5: #3a424d; /* hairline dividers on light surfaces   */
-  --slate-6: #5a636f; /* disabled text, faint icons, idle dot  */
-  --slate-7: #8a929e; /* secondary text, paths, captions       */
-  --slate-8: #b6bdc7; /* primary body text                     */
-  --slate-9: #edf0f4; /* headings, high-emphasis               */
+  /* ---------- Fervon carbon ramp (mapeado sobre los slots "slate") ---------- */
+  --slate-0: #0e0b0a; /* fondo de la app (carbón más profundo)  */
+  --slate-1: #16110e; /* fondo de tarjeta (carbon-2)            */
+  --slate-2: #1a1310; /* tarjeta elevada / hover / panel interior (card) */
+  --slate-3: #211913; /* popover, modal, input                 */
+  --slate-4: #2c211b; /* bordes (contextos sólidos) — line     */
+  --slate-5: #3a2c22; /* divisores finos — line2               */
+  --slate-6: #6b5d50; /* texto deshabilitado, iconos tenues    */
+  --slate-7: #94867a; /* texto secundario, rutas — dim         */
+  --slate-8: #a89a8e; /* texto de cuerpo principal — ash       */
+  --slate-9: #efe7dc; /* titulares, alta énfasis — bone        */
 
   /* ---------- Borders are ALPHA (sit correctly on any elevation) ------- */
-  --border-rest: rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(255, 255, 255, 0.1);
-  --border-focus: rgba(255, 255, 255, 0.14);
+  --border-rest: rgba(239, 231, 220, 0.07);
+  --border-hover: rgba(255, 106, 0, 0.22);
+  --border-focus: rgba(255, 106, 0, 0.4);
 
-  /* ---------- Accent: "Aurora" (cyan-teal — NOT status-green) ---------- */
-  --accent: #2dd4bf;
-  --accent-bright: #5eead4;
-  --accent-contrast: #04201e;
-  --accent-muted: #1c7a82;
-  --accent-subtle: #0e2a2e;
-  --accent-ring: rgba(45, 212, 191, 0.14);
+  /* ---------- Acento: "Brasa" (ember/ámbar de fuego Fervon) ------------ */
+  --accent: #ff6a00;        /* ember            */
+  --accent-bright: #ffb02e; /* amber            */
+  --accent-contrast: #1a0e06;
+  --accent-muted: #e0480f;  /* brasa            */
+  --accent-subtle: #2a1408;
+  --accent-ring: rgba(255, 106, 0, 0.18);
+
+  /* ---------- Acento de producto launchpad dentro de Fervon (verde) --- */
+  --ac: #8fd06b;
 
   /* ---------- Status: color + (paired with) shape + motion ------------- */
   --status-idle: #5a636f;   --status-idle-dim: rgba(90, 99, 111, 0.55);   --status-idle-glow: rgba(90, 99, 111, 0);

@@ -344,6 +344,17 @@ export default function App() {
         </div>
       </main>
 
+      <footer className="app-foot">
+        <span className="foot-mark">
+          <span className="foot-flame" aria-hidden>🔥</span>
+          parte de{' '}
+          <a href="https://fervon.dev" target="_blank" rel="noreferrer">
+            Fervon
+          </a>
+        </span>
+        <span className="foot-tag">forjado al rojo vivo</span>
+      </footer>
+
       {selected && (
         <DetailDrawer
           project={selected}
