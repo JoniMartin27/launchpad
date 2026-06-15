@@ -1,5 +1,7 @@
 # 🛰️ Mission Control
 
+![License](https://img.shields.io/github/license/JoniMartin27/launchpad)
+
 > One folder, a dozen repos, one screen — no port collisions.
 
 Point Mission Control at the folder where you keep your projects and press start.
