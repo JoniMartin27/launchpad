@@ -5,9 +5,9 @@
 html, body, #root { height: 100%; margin: 0; }
 
 body {
-  /* §1.1 atmosphere: faint top-center accent vignette over the deepest slate. */
+  /* Atmósfera Fervon: resplandor de brasa radial (ember) sobre el carbón. */
   background:
-    radial-gradient(120% 80% at 50% -10%, rgba(45, 212, 191, 0.035), transparent 60%),
+    radial-gradient(120% 80% at 50% -10%, rgba(255, 106, 0, 0.06), rgba(224, 72, 15, 0.025) 38%, transparent 64%),
     var(--slate-0);
   color: var(--slate-8);
   font-family: var(--font-ui);
@@ -56,8 +56,9 @@ a:hover { color: var(--accent-bright); }
 /* brand tile + blip */
 .brand-tile {
   position: relative; width: 28px; height: 28px; border-radius: var(--radius-md);
-  background: var(--accent); display: inline-flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+  background: linear-gradient(180deg, var(--accent), var(--accent-muted));
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25) inset, 0 4px 14px rgba(255, 106, 0, 0.28);
 }
 .brand-blip {
   width: 4px; height: 4px; border-radius: 50%; background: var(--accent-contrast); position: relative;
@@ -145,13 +146,15 @@ a:hover { color: var(--accent-bright); }
 }
 .view-seg.active { color: var(--slate-9); }
 
-/* new button */
+/* new button — botón de fuego Fervon (.btn-fire) */
 .new-btn {
-  background: var(--accent); color: var(--accent-contrast); border: none;
+  background: linear-gradient(180deg, var(--accent), var(--accent-muted));
+  color: var(--accent-contrast); border: none;
   border-radius: var(--radius-md); padding: 7px 14px; font-weight: 600; font-size: var(--fs-label);
-  transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-spring);
+  box-shadow: 0 6px 20px rgba(255, 106, 0, 0.28);
+  transition: box-shadow var(--dur-fast), transform var(--dur-fast) var(--ease-spring);
 }
-.new-btn:hover { background: var(--accent-bright); }
+.new-btn:hover { box-shadow: 0 10px 26px rgba(255, 106, 0, 0.4); transform: translateY(-1px); }
 .new-btn:active { transform: scale(0.97); }
 .new-btn.big { padding: 11px 22px; font-size: var(--fs-body); }
 
@@ -665,6 +668,28 @@ a:hover { color: var(--accent-bright); }
 .toast-close { background: none; border: none; color: var(--slate-6); font-size: 12px; padding: 2px; }
 .toast-close:hover { color: var(--slate-9); }
 .toast-more { font-size: var(--fs-caption); color: var(--slate-6); text-align: center; }
+
+/* ============================================================ footer Fervon === */
+.app-foot {
+  flex: 0 0 auto; border-top: 1px solid var(--border-rest);
+  padding: var(--sp-5) var(--page-gutter);
+  display: flex; align-items: center; justify-content: center; gap: var(--sp-3);
+  flex-wrap: wrap; text-align: center;
+}
+.foot-mark {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--fs-label); font-weight: 600; color: var(--slate-8);
+}
+.foot-flame { font-size: 14px; line-height: 1; filter: saturate(1.1); }
+.foot-mark a { color: var(--accent-bright); font-weight: 700; }
+.foot-mark a:hover { color: var(--accent); }
+.foot-tag {
+  font-size: var(--fs-caption); font-style: italic; color: var(--slate-7);
+}
+.foot-tag::before { content: '·'; margin-right: var(--sp-3); color: var(--slate-5); }
+@media (max-width: 639px) {
+  .foot-tag::before { display: none; }
+}
 
 /* ============================================================== responsive === */
 @media (max-width: 1023px) {
