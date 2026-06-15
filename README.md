@@ -19,6 +19,8 @@ work, no stray `node` holding port 5173 from yesterday.
 
 Part of [Fervon](https://fervon.dev) — a small studio of local-first developer tools.
 
+> ⭐ **If Mission Control saves you a single `cd` + port-clash hunt, [give it a star](https://github.com/JoniMartin27/launchpad) — it's the fastest way to help it grow.** Got a project it can't auto-detect, or an idea? [Open an issue](https://github.com/JoniMartin27/launchpad/issues).
+
 ## Why
 
 If you keep a dozen projects in one folder, you know the dance: `cd` into each
