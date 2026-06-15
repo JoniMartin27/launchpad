@@ -15,6 +15,8 @@ work, no stray `node` holding port 5173 from yesterday.
 > 🔒 **Local-only by design.** Binds **`127.0.0.1`** (HTTP + WebSocket), never
 > `0.0.0.0`. No accounts, no telemetry, no phone-home.
 
+Part of [Fervon](https://fervon.dev) — a small studio of local-first developer tools.
+
 ## Why
 
 If you keep a dozen projects in one folder, you know the dance: `cd` into each
@@ -72,6 +74,12 @@ local `config.json`, and shows your projects. That's it.
 npm run dev        # Fastify (:7777) + Vite (:5180) with HMR
 ```
 
+### Tests
+
+```sh
+npm test           # server suite — 67 tests via node:test
+```
+
 ## How it works
 
 | Module | Role |
@@ -107,7 +115,8 @@ Global settings live under `settings` (`projectsRoot`, `dashboardPort`,
 
 ## Requirements
 
-- **Node 18+**. Optional: `git` and the GitHub `gh` CLI for git/CI panels;
+- **Node 20+** (CI runs on Node 20 and 22). Optional: `git` and the GitHub
+  `gh` CLI for git/CI panels;
   `uv` for Python/FastAPI projects. All degrade gracefully if absent.
 - Built and tested on **Windows**; the launch/port logic is Windows-aware
   (process-tree kill, dual-stack readiness probe).
