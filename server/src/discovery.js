@@ -185,6 +185,15 @@ function classifyLeaf(dir) {
     framework = 'Static HTML/CSS/JS';
     runnable = true;
     defaultPort = 8000;
+  } else if (pkg && !devCommand && has(dir, 'index.html')) {
+    // A package.json with NO recognizable server framework and NO dev/start
+    // script, but an index.html at the root, is a static site that merely keeps
+    // a manifest (e.g. for a build dep or metadata). Serve it like any static
+    // site instead of mislabeling it a non-runnable "node-server". (fervon.)
+    type = 'html5-static';
+    framework = 'Static HTML/CSS/JS';
+    runnable = true;
+    defaultPort = 8000;
   } else if (pkg) {
     type = 'node-server';
     framework = 'Node';
