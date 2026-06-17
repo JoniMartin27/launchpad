@@ -53,6 +53,10 @@ test('scanFilesystem lists real projects but skips worktrees and stray folders',
     mk('real-app', 'package.json', JSON.stringify({ name: 'real-app', scripts: { dev: 'vite' } }));
     mk('static-site', 'index.html', '<!doctype html>');
     fs.mkdirSync(path.join(mk('repo-only', null), '.git')); // own repo root counts as a project
+    // Static site that also keeps a manifest with no server framework / dev
+    // script — must be a runnable static site, not a dead "node-server". (fervon)
+    const staticWithPkg = mk('static-pkg', 'index.html', '<!doctype html>');
+    fs.writeFileSync(path.join(staticWithPkg, 'package.json'), JSON.stringify({ name: 'static-pkg', dependencies: { '@resvg/resvg-js': '^2' } }));
 
     // Noise — must be skipped.
     fs.mkdirSync(path.join(mk('wt-shell', null), 'node_modules')); // orphaned worktree shell (no markers)
@@ -60,8 +64,13 @@ test('scanFilesystem lists real projects but skips worktrees and stray folders',
     fs.writeFileSync(path.join(liveWt, '.git'), 'gitdir: /repo/.git/worktrees/x'); // .git FILE = live worktree
     mk('empty-dir', null);
 
-    const ids = scanFilesystem(root).map((p) => p.id).sort();
-    assert.deepEqual(ids, ['real-app', 'repo-only', 'static-site']);
+    const scanned = scanFilesystem(root);
+    const ids = scanned.map((p) => p.id).sort();
+    assert.deepEqual(ids, ['real-app', 'repo-only', 'static-pkg', 'static-site']);
+    // The manifest-carrying static site is detected as runnable static, not node-server.
+    const staticPkg = scanned.find((p) => p.id === 'static-pkg');
+    assert.equal(staticPkg.type, 'html5-static');
+    assert.equal(staticPkg.runnable, true);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
