@@ -1,0 +1,39 @@
+<svg viewBox="0 0 1200 630" width="1200" height="630" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Launchpad — Fervon">
+  <title>Launchpad — Parte de Fervon</title>
+  <defs>
+    <radialGradient id="bgr" cx="0.66" cy="0.62" r="0.9"><stop offset="0" stop-color="#241308"/><stop offset="0.42" stop-color="#150d09"/><stop offset="1" stop-color="#0a0807"/></radialGradient>
+    <radialGradient id="forge" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ff7a16" stop-opacity="0.85"/><stop offset="0.45" stop-color="#e0480f" stop-opacity="0.40"/><stop offset="1" stop-color="#e0480f" stop-opacity="0"/></radialGradient>
+    <linearGradient id="billet" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a1c08"/><stop offset="0.30" stop-color="#ff6a00"/><stop offset="0.52" stop-color="#fff4d6"/><stop offset="0.74" stop-color="#ffb02e"/><stop offset="1" stop-color="#7a3a16"/></linearGradient>
+    <linearGradient id="name" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff1d8"/><stop offset="1" stop-color="#ffb02e"/></linearGradient>
+    <linearGradient id="fi" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#E0480F"/><stop offset="0.5" stop-color="#FF6A00"/><stop offset="1" stop-color="#FFB02E"/></linearGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.46" r="0.75"><stop offset="0.55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.62"/></radialGradient>
+    <radialGradient id="spark" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff6e2"/><stop offset="0.4" stop-color="#ffb02e"/><stop offset="1" stop-color="#ff6a00" stop-opacity="0"/></radialGradient>
+    <radialGradient id="sparkA" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff6e2"/><stop offset="0.4" stop-color="#8FD06B"/><stop offset="1" stop-color="#8FD06B" stop-opacity="0"/></radialGradient>
+    <filter id="bloom" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="22"/></filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>
+    <filter id="embers" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.45" numOctaves="2" seed="11" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 0.55  0 0 0 0 0.12  0 0 0 14 -6.6"/></filter>
+    <filter id="haze" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="2" seed="4" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="26"/></filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bgr)"/>
+  <g filter="url(#haze)"><ellipse cx="880" cy="400" rx="520" ry="430" fill="url(#forge)"/></g>
+  <rect width="1200" height="630" fill="#ff6a00" opacity="0.06"/>
+  <rect width="1200" height="630" filter="url(#embers)" opacity="0.55"/>
+  <g transform="rotate(-19 905 372)"><rect x="690" y="356" width="470" height="34" rx="17" fill="url(#billet)" filter="url(#bloom)" opacity="0.9"/><rect x="700" y="360" width="450" height="26" rx="13" fill="url(#billet)"/><rect x="760" y="366" width="150" height="14" rx="7" fill="#fff7e2" opacity="0.85" filter="url(#soft)"/></g>
+  <g>
+    <circle cx="980" cy="300" r="34" fill="url(#spark)" opacity="0.9"/><circle cx="980" cy="300" r="6" fill="#fff6e2"/>
+    <circle cx="1056" cy="220" r="22" fill="url(#sparkA)" opacity="0.85"/><circle cx="1056" cy="220" r="4" fill="#fff2d2"/>
+    <circle cx="900" cy="210" r="18" fill="url(#spark)" opacity="0.75"/><circle cx="900" cy="210" r="3.5" fill="#fff2d2"/>
+    <circle cx="1112" cy="150" r="14" fill="url(#sparkA)" opacity="0.7"/><circle cx="1030" cy="128" r="10" fill="url(#spark)" opacity="0.7"/>
+    <circle cx="836" cy="300" r="12" fill="url(#spark)" opacity="0.6"/><circle cx="952" cy="150" r="8" fill="url(#sparkA)" opacity="0.6"/><circle cx="1140" cy="280" r="9" fill="url(#spark)" opacity="0.55"/>
+    <g stroke="#ffb86b" stroke-linecap="round" opacity="0.5"><path d="M968 360 L1000 250" stroke-width="2"/><path d="M1010 350 L1060 235" stroke-width="1.6"/><path d="M915 350 L905 240" stroke-width="1.6"/></g>
+  </g>
+  <rect width="1200" height="630" fill="url(#vig)"/>
+  <g transform="translate(74,50) scale(0.46)"><ellipse cx="56" cy="82" rx="62" ry="62" fill="#FF6A00" opacity="0.18"/><path d="M58 6 C40 6 30 17 30 38 L30 48 L10 48 L10 70 L30 70 L30 116 C30 120 33 123 37 123 L51 123 C55 123 58 120 58 116 L58 70 L82 70 L82 48 L58 48 L58 38 C58 30 62 26 71 26 L86 26 L86 6 Z" fill="url(#fi)"/><circle cx="100" cy="22" r="5" fill="#FFD37A"/><path d="M86 30 L98 20" stroke="#FFB02E" stroke-width="3.2" stroke-linecap="round"/><path d="M94 12 L99 2" stroke="#FF6A00" stroke-width="3.2" stroke-linecap="round"/><circle cx="116" cy="30" r="2.8" fill="#FF6A00"/></g>
+  <text x="146" y="98" font-family="Inter, system-ui, sans-serif" font-size="34" font-weight="700" fill="#efe7dc" letter-spacing="0.5">fervon</text>
+  <text x="96" y="336" font-family="Inter, system-ui, sans-serif" font-size="92" font-weight="800" fill="url(#name)" letter-spacing="-3">Launchpad</text>
+  <rect x="100" y="362" width="110" height="6" rx="3" fill="#8FD06B"/>
+  <text x="98" y="434" font-family="Inter, system-ui, sans-serif" font-size="36" font-weight="500" fill="#efe7dc">Lanza todos tus proyectos locales.</text>
+  <text x="98" y="484" font-family="Inter, system-ui, sans-serif" font-size="27" font-weight="400" fill="#b0a296">Descubre, arranca y monitoriza · puertos sin colision</text>
+  <rect x="96" y="524" width="269" height="58" rx="29" fill="none" stroke="#8FD06B" stroke-opacity="0.5"/><text x="230.5" y="561" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="25" font-weight="600" fill="#8FD06B">mission control</text>
+  <text x="1104" y="582" text-anchor="end" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="600" fill="#8FD06B">fervon.dev</text>
+</svg>
