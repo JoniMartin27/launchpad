@@ -1,0 +1,20 @@
+<!-- Fervon mark — COMPACT tier (favicon / app icon, <48px). Source of truth for the 'f' letterform.
+     Small-size optimized: no spark accents, short+thick crossbar, raised gradient floor (brasa #E0480F),
+     glyph scaled to ~0.9 of the carbon tile. Reads clearly at 16px and in flat monochrome. -->
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fervon">
+  <defs>
+    <linearGradient id="fav-forge" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#E0480F"/>
+      <stop offset="0.5" stop-color="#FF6A00"/>
+      <stop offset="1" stop-color="#FFB02E"/>
+    </linearGradient>
+    <linearGradient id="fav-spark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FF6A00"/>
+      <stop offset="1" stop-color="#FFD37A"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="128" height="128" rx="28" fill="#16110E"/>
+  <g transform="translate(33,9) scale(0.94)" stroke="none">
+    <path d="M58 6 C40 6 30 17 30 38 L30 48 L10 48 L10 70 L30 70 L30 116 C30 120 33 123 37 123 L51 123 C55 123 58 120 58 116 L58 70 L82 70 L82 48 L58 48 L58 38 C58 30 62 26 71 26 L86 26 L86 6 Z" fill="url(#fav-forge)"/>
+  </g>
+</svg>
