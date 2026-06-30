@@ -3,10 +3,19 @@
  * Tema "carbón + brasa": fondo carbón oscuro, texto hueso, acentos de fuego
  * ember/ámbar. Cada componente referencia estas variables, nunca un hex literal,
  * así que reteñir la paleta aquí re-viste todo el dashboard de un solo cambio.
- * Sin fuentes/iconos externos — stack del sistema + glifos Unicode.
+ * Tipografía Inter autoalojada (woff2 variable, sin CDN — CSP estricta);
+ * cae a la pila del sistema si el woff2 no carga. Iconos = glifos Unicode.
  * Paleta canónica Fervon: --carbon #0E0B0A · --card #1A1310 · --line #2C211B
  *   --ember #FF6A00 · --brasa #E0480F · --amber #FFB02E · --bone #EFE7DC.
  */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-var.woff2') format('woff2');
+}
+
 :root {
   /* ---------- Fervon carbon ramp (mapeado sobre los slots "slate") ---------- */
   --slate-0: #0e0b0a; /* fondo de la app (carbón más profundo)  */
