@@ -154,9 +154,13 @@ export class Catalog {
     return this.runtime.get(id) || null;
   }
 
-  /** Create/replace runtime state for a launch. */
+  /**
+   * Create/replace runtime state for a launch. Stamps `statusChangedAt` like
+   * `setStatus` does, so a port probe taken before this launch is not mistaken
+   * for evidence about it.
+   */
   setRuntime(id, state) {
-    this.runtime.set(id, { ...state });
+    this.runtime.set(id, { statusChangedAt: Date.now(), ...state });
   }
 
   /**
