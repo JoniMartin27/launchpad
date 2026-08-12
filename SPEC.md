@@ -362,7 +362,8 @@ This is exactly what `GET /api/projects` returns per element and what `web/src/t
 type RegistryKind = 'npm' | 'pypi' | 'none';
 type CiStatus     = 'passing' | 'failing' | 'none' | 'unknown';
 type RunStatus    = 'stopped' | 'starting' | 'running' | 'stopping' | 'error';
-type TypeGroup    = 'Node' | 'Python' | 'Static' | 'Docker' | 'Other'; // top-bar filter buckets
+type TypeGroup    = 'Node' | 'Python' | 'Static' | 'Docker' | 'Go' | 'Rust' | 'Other'; // top-bar filter buckets
+type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun';   // detected from the lockfile
 
 interface Project {
   id: string;                 // stable key, e.g. "lookspan"
@@ -372,6 +373,7 @@ interface Project {
   typeGroup: TypeGroup;       // bucketed for the type filter
   framework: string;          // human string, e.g. "Next.js 16.2"
   repoUrl: string | null;
+  packageManager: PackageManager | null;  // Node projects only; null elsewhere
 
   runnable: boolean;          // can we launch it?
   command: string;            // resolved dev command that WILL be run
@@ -418,10 +420,12 @@ interface SubProject {
 ```
 
 `typeGroup` mapping rule (server-side):
-- `Node`: any `node-*`, `vite-*`, `express-*`, `next`, `electron-*`, `vanilla-es-modules`, `monorepo` (JS).
-- `Python`: `fastapi-python`, anything python.
+- `Node`: any `node-*`, `vite-*`, `express-*`, `next`, `electron-*`, `deno`, `vanilla-es-modules`, `monorepo` (JS).
+- `Python`: `fastapi-python`, `django-python`, `flask-python`, anything python.
 - `Static`: `html5-static`, `astro` (when purely static).
-- `Docker`: type contains `docker`.
+- `Docker`: type contains `docker` or `compose`.
+- `Go`: `go-*`.
+- `Rust`: `rust-*`.
 - `Other`: fallback (e.g. `node-telegram-bot`, `node-cli` may map to `Node` — bots count as Node here; reserve `Other` for unclassifiable).
 
 WS `status`/`log` messages mutate this model in the store; the card and drawer read from it.
@@ -548,6 +552,12 @@ export default defineConfig({
 | `vanilla-es-modules` / static (`serve`) | `npm run dev -- -l <P>` or `npx serve . --listen <P>` | `serve` uses `-l`/`--listen`. |
 | `html5-static` | `npx serve . --listen <P>` | `--listen`. |
 | `node-telegram-bot`, `node-cli`, no-HTTP | command as-is | no port; `PORT` set harmlessly; readiness = 2.5s grace timer. |
+| `django-python` | `uv run python manage.py runserver 127.0.0.1:<P>` | POSITIONAL `host:port` argument (`rule.portArg` template), not a flag. |
+| `flask-python` | `uv run flask run --port <P>` | `--port` flag + `FLASK_RUN_PORT` env. |
+| `deno` | `deno task dev` | `PORT` env only: a Deno task forwards extra args into the task body, where a flag's position is unpredictable. |
+| `go-http` | `go run .` | `PORT` env only. |
+| `rust-cargo` | `cargo run` | `PORT` env only. |
+| `docker-compose` | *(not launched)* | Detected and labelled only: `docker compose up` starts containers a process-tree kill cannot reclaim, so the card would lie about having stopped the stack. |
 | `monorepo` (top-level `npm run dev`) | `npm run dev -- --port <P>` + `PORT` | concurrently-run children; the assigned port targets the primary web app. For per-service control, launch subprojects individually. |
 
 **Kill**: store `child.pid` at spawn; on stop/relaunch/shutdown call `taskkill /PID <pid> /T /F` (`execFile`). Clear `pid` on `exit`; never kill a stale pid (Windows recycles pids) — only `taskkill` while `running`. Dashboard shutdown (`SIGINT`/`process.on('exit')`) iterates all tracked pids and tree-kills them.

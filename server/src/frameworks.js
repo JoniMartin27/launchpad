@@ -73,6 +73,70 @@ export const FRAMEWORKS = {
     needsDoubleDash: false, // direct uvicorn invocation, no npm wrapper
   },
 
+  // --- Django: the port is a POSITIONAL `host:port` argument, not a flag ----
+  'django-python': {
+    baseCommand: 'uv run python manage.py runserver',
+    portFlag: null,
+    portArg: '127.0.0.1:${PORT}',
+    portEnv: 'PORT',
+    needsDoubleDash: false,
+  },
+
+  // --- Flask ---------------------------------------------------------------
+  'flask-python': {
+    baseCommand: 'uv run flask run',
+    portFlag: '--port',
+    portEnv: 'FLASK_RUN_PORT',
+    needsDoubleDash: false,
+  },
+
+  // --- Plain Python (no web framework detected): label only, not launched ---
+  python: {
+    baseCommand: 'uv run python main.py',
+    portFlag: null,
+    portEnv: 'PORT',
+    needsDoubleDash: false,
+    portless: true,
+  },
+
+  // --- Deno ----------------------------------------------------------------
+  // Deno tasks forward extra args to the task body, where a stray `--port`
+  // would land in an unpredictable position; PORT env is the portable route.
+  deno: {
+    baseCommand: 'deno task dev',
+    portFlag: null,
+    portEnv: 'PORT',
+    needsDoubleDash: false,
+  },
+
+  // --- Go ------------------------------------------------------------------
+  'go-http': {
+    baseCommand: 'go run .',
+    portFlag: null,
+    portEnv: 'PORT',
+    needsDoubleDash: false,
+  },
+
+  // --- Rust (cargo) --------------------------------------------------------
+  'rust-cargo': {
+    baseCommand: 'cargo run',
+    portFlag: null,
+    portEnv: 'PORT',
+    needsDoubleDash: false,
+  },
+
+  // --- Docker Compose: detected and labelled, never launched ---------------
+  // `docker compose up` starts containers that outlive the spawned client, so a
+  // process-tree kill would not stop the stack. Discovery marks these projects
+  // non-runnable; this entry exists only so the card shows an honest command.
+  'docker-compose': {
+    baseCommand: 'docker compose up',
+    portFlag: null,
+    portEnv: 'PORT',
+    needsDoubleDash: false,
+    portless: true,
+  },
+
   // --- Astro --------------------------------------------------------------
   astro: {
     baseCommand: 'npm run dev',
@@ -190,6 +254,15 @@ export function buildSpawnArgs({ command, port, rule, portFlag, portless }) {
 
   const flag = portFlag !== undefined && portFlag !== null ? portFlag : rule.portFlag;
   if (!flag) {
+    // Some tools take the port as a POSITIONAL argument instead of a flag
+    // (Django: `manage.py runserver 127.0.0.1:8000`). `portArg` is a template
+    // whose `${PORT}` is substituted and appended once.
+    if (rule.portArg) {
+      const positional = String(rule.portArg).replace(/\$\{PORT\}/g, String(port));
+      if (!args.includes(positional)) {
+        return { cmd, args: [...args, positional], usedFlag: null };
+      }
+    }
     // No flag known → rely on env injection only.
     return { cmd, args, usedFlag: null };
   }
@@ -205,7 +278,10 @@ export function buildSpawnArgs({ command, port, rule, portFlag, portless }) {
   // args through to the underlying script/binary. For a BARE binary (e.g.
   // `next dev`, `uvicorn …`) a `--` would be forwarded literally and rejected,
   // so we inject the flag directly with no separator. (pregon mc-bug fix.)
-  const isWrapper = /^(npm|npx|yarn|pnpm)$/.test(cmd);
+  // Yarn is deliberately absent: Yarn Berry forwards a literal `--` to the
+  // script instead of consuming it as a separator, so adding one breaks the
+  // command. `yarn dev --port <p>` already reaches the underlying tool.
+  const isWrapper = /^(npm|npx|pnpm|pnpx|bun|bunx)$/.test(cmd);
   if (rule.needsDoubleDash && isWrapper) {
     // Ensure a single `--` separator so the flag reaches the underlying tool.
     if (!injected.includes('--')) injected.push('--');

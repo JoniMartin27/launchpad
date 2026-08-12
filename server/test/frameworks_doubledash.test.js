@@ -57,3 +57,27 @@ test('fastapi baseCommand now uses uv run uvicorn', () => {
   assert.equal(cmd, 'uv');
   assert.deepEqual(args, ['run', 'uvicorn', 'main:app', '--reload', '--port', '4012']);
 });
+
+test('Django gets the port as a positional host:port argument', () => {
+  const rule = ruleForType('django-python');
+  const out = buildSpawnArgs({ command: 'uv run python manage.py runserver', port: 4021, rule });
+  assert.deepEqual(out.args, ['run', 'python', 'manage.py', 'runserver', '127.0.0.1:4021']);
+  assert.equal(out.usedFlag, null);
+});
+
+test('a positional port is not injected twice', () => {
+  const rule = ruleForType('django-python');
+  const once = buildSpawnArgs({ command: 'uv run python manage.py runserver', port: 4021, rule });
+  const twice = buildSpawnArgs({ command: once.args.length ? `uv ${once.args.join(' ')}` : '', port: 4021, rule });
+  assert.equal(twice.args.filter((a) => a === '127.0.0.1:4021').length, 1);
+});
+
+test('yarn never gets a `--` separator (Berry forwards it literally)', () => {
+  const rule = ruleForType('vite-react'); // needsDoubleDash: true
+  const yarn = buildSpawnArgs({ command: 'yarn dev', port: 4030, rule });
+  assert.deepEqual(yarn.args, ['dev', '--port', '4030']);
+  const pnpm = buildSpawnArgs({ command: 'pnpm dev', port: 4030, rule });
+  assert.deepEqual(pnpm.args, ['dev', '--', '--port', '4030']);
+  const bun = buildSpawnArgs({ command: 'bun run dev', port: 4030, rule });
+  assert.deepEqual(bun.args, ['run', 'dev', '--', '--port', '4030']);
+});

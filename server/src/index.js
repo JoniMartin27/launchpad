@@ -215,7 +215,9 @@ process.on('exit', () => {
 // 9. Bind + start WS.
 // ---------------------------------------------------------------------------
 const HOST = '127.0.0.1';
-const PORT = settings.dashboardPort || 7777;
+// An explicit MISSION_CONTROL_PORT always wins over the stored config so a
+// clash on :7777 can be worked around without editing a git-ignored file.
+const PORT = Number(process.env.MISSION_CONTROL_PORT) || settings.dashboardPort || 7777;
 
 try {
   await app.listen({ host: HOST, port: PORT });

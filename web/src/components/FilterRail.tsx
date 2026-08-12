@@ -1,6 +1,6 @@
 import type { TypeGroup } from '../types';
 
-export const TYPE_GROUPS: TypeGroup[] = ['Node', 'Python', 'Static', 'Docker', 'Other'];
+export const TYPE_GROUPS: TypeGroup[] = ['Node', 'Python', 'Static', 'Docker', 'Go', 'Rust', 'Other'];
 
 export type SortKey = 'recent' | 'name' | 'status' | 'uptime';
 

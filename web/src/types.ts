@@ -4,7 +4,9 @@
 export type RegistryKind = 'npm' | 'pypi' | 'none';
 export type CiStatus = 'passing' | 'failing' | 'none' | 'unknown';
 export type RunStatus = 'stopped' | 'starting' | 'running' | 'stopping' | 'error';
-export type TypeGroup = 'Node' | 'Python' | 'Static' | 'Docker' | 'Other';
+export type TypeGroup = 'Node' | 'Python' | 'Static' | 'Docker' | 'Go' | 'Rust' | 'Other';
+/** Node package manager detected from the project's lockfile. */
+export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun';
 
 /**
  * Visual/UX status the card actually renders. This is a SUPERSET of the
@@ -38,6 +40,8 @@ export interface Project {
   typeGroup: TypeGroup;
   framework: string;
   repoUrl: string | null;
+  /** Detected package manager (Node projects); null for other ecosystems. */
+  packageManager: PackageManager | null;
 
   runnable: boolean;
   command: string;
