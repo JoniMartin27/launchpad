@@ -813,6 +813,8 @@ export function discover(config) {
       // the case a manifest cannot express (a private workspace root whose
       // published package is one of its members).
       registry: ov.registry || null,
+      // Opt-in: bring this project back up if it crashes on its own.
+      autoRestart: ov.autoRestart === true,
       env: ov.env || {},
       _seedPort: ov.port ?? null,
     });

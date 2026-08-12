@@ -101,6 +101,10 @@ export const DEFAULT_SETTINGS = {
   // Command used by the card's "open in editor" button. Anything on your PATH:
   // code, code-insiders, subl, webstorm, nvim…
   editorCommand: 'code',
+  // Auto-restart policy (only applies to projects with autoRestart: true).
+  autoRestartMax: 3,
+  autoRestartDelayMs: 1000,
+  autoRestartHealthyMs: 60000,
   readyRegex: 'ready in|listening on|Local:\\s+http|started server|compiled|running at',
 };
 
@@ -190,7 +194,7 @@ export function validateConfig(config) {
           errors.push(`projects.${id}.${field} must be a ${type}`);
         }
       }
-      for (const boolField of ['hidden', 'runnable']) {
+      for (const boolField of ['hidden', 'runnable', 'autoRestart']) {
         if (p[boolField] !== undefined && typeof p[boolField] !== 'boolean') {
           errors.push(`projects.${id}.${boolField} must be a boolean`);
         }
