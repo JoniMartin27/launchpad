@@ -723,3 +723,59 @@ tests.
    drawer. Y los subproyectos no lo ofrecen en absoluto.
 9. **`installState` asume npm/uv**: Go o Rust sin dependencias no ofrecen nada.
 10. **Sin telemetría de adopción** más allá de las descargas de npm.
+
+---
+
+## Iteración 12 — 2026-08-12
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `0e2636e` · 146 tests de servidor + 14 de frontend |
+| npm | **1.1.0** — 1.2.0 y 1.3.0 etiquetadas sin publicar |
+| CI / PRs / issues | 8 checks verdes · 0 · 0 · 1 estrella · audit 0 |
+
+### Qué se cambió — [PR #27](https://github.com/JoniMartin27/launchpad/pull/27) (otra mitad de la #2)
+
+**Autoreinicio al caer**, opt-in por proyecto. La política vive aparte como
+función pura y es deliberadamente tímida: solo tras salida distinta de cero,
+nunca tras un stop tuyo ni tras un arranque que no llegó a levantar, con tope de
+intentos y espera creciente, y perdonando el contador si el proyecto aguantó un
+minuto en pie.
+
+**El test en vivo encontró un fallo real de la implementación:** `setRuntime`
+reemplaza el registro entero al arrancar, así que **el contador de intentos se
+perdía** y el tope no se alcanzaba nunca — había implementado justo el bucle
+infinito que la política existe para evitar. Ahora se arrastra explícitamente y
+un arranque manual lo resetea.
+
+**Segundo hallazgo:** con la ventana de arranque cableada a 2,5 s, toda caída de
+un proyecto sin puerto llegaba en estado `starting`, la rama que no se reinicia.
+Ahora es `settings.portlessGraceMs`.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **157 de servidor + 14 de frontend** |
+| Mutantes | 5 muertos (sin tope, reiniciar salida limpia, ignorar opt-in, ignorar stop, contador perdido) |
+| CI | 8 checks verdes · Veredicto limpio |
+| En vivo | servidor que muere a los 6 s → **4 arranques** (original + 3 reintentos = el tope) → se rinde, puerto libre, y 10 s después sigue parado |
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **npm sigue en 1.1.0 con dos versiones etiquetadas sin publicar.** Doce
+   iteraciones viven solo en GitHub.
+2. **El autoreinicio no se puede activar desde la UI**, solo editando el config;
+   y la tarjeta no dice que un proyecto lo tenga puesto.
+3. **Captura y GIF del README** son de junio: sin banda de avisos, sin botones
+   de lote, sin los de abrir.
+4. **Los perfiles no se pueden crear desde la UI**, ni hay selector en la barra.
+5. **El escaneo sigue siendo síncrono**; `fs.promises` con concurrencia acotada.
+6. **`restart` sigue bloqueando** hasta 8 s esperando que el puerto se libere.
+7. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto.
+8. **La tarjeta no ofrece abrir en editor/terminal/carpeta**: hay que abrir el
+   drawer, y los subproyectos no lo ofrecen en absoluto.
+9. **`installState` asume npm/uv**: Go o Rust sin dependencias no ofrecen nada.
+10. **Sin telemetría de adopción** más allá de las descargas de npm.
