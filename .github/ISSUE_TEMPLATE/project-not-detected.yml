@@ -1,0 +1,81 @@
+name: "🔍 Project not detected (or launched wrongly)"
+description: Mission Control missed your project, mislabelled it, or ran the wrong command.
+title: "[discovery] "
+labels: ["discovery"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the most useful report this project can receive. Discovery
+        classifies projects from their manifests and on-disk markers — never
+        from folder names — so the fix is only ever as good as the variety of
+        layouts we have seen.
+
+        Everything below is on your machine already; no reproduction needed.
+
+  - type: dropdown
+    id: symptom
+    attributes:
+      label: What happened?
+      options:
+        - The project does not appear in the grid at all
+        - It appears but has no Start button
+        - It appears with the wrong type / framework label
+        - Start runs the wrong command, or the wrong package manager
+        - It starts but never turns green (stuck on "starting")
+        - Stop leaves the process alive / the port taken
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: layout
+    attributes:
+      label: Folder layout
+      description: Top level of the project folder — one level is usually enough.
+      placeholder: |
+        my-project/
+        ├── package.json
+        ├── pnpm-lock.yaml
+        ├── src/
+        └── docker-compose.yml
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: manifest
+    attributes:
+      label: The manifest that should identify it
+      description: >
+        `package.json` (the `scripts`, `dependencies` and `packageManager`
+        fields are what matter — feel free to trim the rest), or `pyproject.toml`
+        / `go.mod` / `Cargo.toml` / `deno.json` / `manage.py`, whichever applies.
+      render: json
+    validations:
+      required: true
+
+  - type: input
+    id: expected
+    attributes:
+      label: What should it have done?
+      placeholder: "Detected as a SvelteKit app and launched with `pnpm dev --port <P>`"
+    validations:
+      required: true
+
+  - type: textarea
+    id: card
+    attributes:
+      label: What the card shows (optional)
+      description: >
+        The type badge, the command in the drawer, and any red reason text. If
+        the project starts, paste the first few log lines from the drawer.
+      render: text
+
+  - type: input
+    id: env
+    attributes:
+      label: OS and Node version
+      placeholder: "Windows 11 / Node 22.4.0  ·  or  ·  macOS 15 / Node 20.15.1"
+    validations:
+      required: true

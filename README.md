@@ -148,7 +148,16 @@ Global settings live under `settings` (`projectsRoot`, `dashboardPort`,
 Single-user, loopback-only. Every request is checked for a loopback remote
 address; the socket binds `127.0.0.1` exclusively. It launches processes you
 already have on disk with commands derived from those projects — treat it like
-running `npm run dev` yourself. See `SPEC.md` §9.
+running `npm run dev` yourself. See [`SECURITY.md`](SECURITY.md) for the threat
+model and how to report an issue, and `SPEC.md` §9.
+
+## Contributing
+
+The single most useful thing you can send is **a project it failed to detect**:
+open a [Project not detected](https://github.com/JoniMartin27/launchpad/issues/new?template=project-not-detected.yml)
+issue with your manifest and folder layout. See [`CONTRIBUTING.md`](CONTRIBUTING.md)
+for the dev loop and house rules, and [`CHANGELOG.md`](CHANGELOG.md) for what has
+changed.
 
 ## License
 
