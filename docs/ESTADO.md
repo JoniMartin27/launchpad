@@ -230,3 +230,75 @@ todo perdido en silencio. Ahora viajan por la API y se pintan en una banda.
 10. **Descubrimiento y arranque no cubren Docker Compose** (detectado pero no
     lanzable, a propósito). Un `up`/`down` de verdad, con parada honesta, es la
     pieza que falta para no tener una tarjeta muerta en pantalla.
+
+---
+
+## Iteración 4 — 2026-08-12
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `9d371f9` · 96 tests de servidor, **0 de frontend** |
+| npm | publicado por Jonathan; el registro tardó **~2 min** en propagar (el 404 inicial era caché, no un fallo) |
+| CI / PRs / issues | verde en 4 jobs · 0 · 0 · 1 estrella · salud 100% |
+
+### Qué se cerró
+
+**Publicación (mejora #1, fuera de PR).** `@fervon/launchpad@1.1.0` verificado de
+extremo a extremo desde el registro público: instala, el binario responde,
+escanea el CWD, detecta (`demo-go` → go-http, `demo-web` → html5-static) y sirve
+la UI. Anunciado con Pregón:
+[Bluesky](https://bsky.app/profile/jonimartin.bsky.social/post/3msuxfydeu322) ·
+[Mastodon](https://mastodon.social/@jonimartin/117082146495842128).
+
+**[PR #17](https://github.com/JoniMartin27/launchpad/pull/17) — el frontend tiene tests (mejora #9).**
+Siete pruebas de humo montan el `<App/>` real contra una API simulada. El arnés
+aísla de verdad (`fetch` y `WebSocket` simulados): no puede arrancar, parar ni
+instalar un proyecto del usuario. `npm test` corre las dos mitades, así que el
+CI las cubre y `prepublishOnly` no deja publicar sin ellas.
+
+Tropiezo aprendido: **jsdom 30 no arranca en el Node 20 del runner** (su undici
+pide `webidl.util.markAsUncloneable`). Cambiado a `happy-dom`, que además es más
+rápido. Lo pilló el CI, no yo.
+
+**[PR #18](https://github.com/JoniMartin27/launchpad/pull/18) — el badge de versión (mejora #7).**
+`registryTarget` tenía cableados los proyectos del autor y adivinaba
+`pypi/<carpeta>` para cualquier proyecto Python: en un paquete que ya instala
+gente, eso enseña **el paquete de otro**. Ahora manda el manifiesto, y si no
+declara nada no hay badge. El caso que el manifiesto no puede expresar (raíz de
+workspace privada con el paquete publicado dentro, que es lo que le pasa a
+lookspan) se cubre con un override `registry` por proyecto.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **104 de servidor + 7 de frontend** (eran 96 + 0) |
+| CI | verde en 4 jobs · `npm audit` 0 |
+| npm | 1.1.0 instalable y verificado · difundido |
+| PRs abiertas / issues | 0 / 0 |
+| Mutantes | 3 muertos (banda de avisos, carga de proyectos, tabla cableada) |
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **Caché de descubrimiento por mtime.** Cada rescan relee de forma síncrona
+   todos los manifiestos y puede recorrer 3 niveles; el watcher lo dispara cada
+   750 ms. Es el techo de escalabilidad que queda.
+2. **Arrancar y parar en lote / perfiles.** Levantar front+API+DB son N clics y
+   N esperas; es el caso de uso real de quien tiene un stack.
+3. **Abrir en editor / terminal / carpeta** desde la tarjeta.
+4. **Autoreinicio al caer y persistencia entre reinicios del panel.**
+5. **`stop` bloquea hasta 2 s en POSIX** esperando al SIGTERM; debería devolver
+   `202` al instante y resolver la muerte en segundo plano.
+6. **Captura y GIF del README** son de junio: sin tema Fervon, sin las tarjetas
+   nuevas, sin la banda de avisos. Es lo primero que ve quien llega desde npm.
+7. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto
+   quitaría la tarjeta muerta.
+8. **La cobertura de frontend es un humo mínimo**: 7 tests sobre el render. No
+   hay ninguno de interacción (pulsar Start llama al endpoint correcto, el
+   drawer abre, el filtro filtra).
+9. **`registryTarget` no mira los workspaces**: podría proponer el override solo
+   cuando detecte una raíz privada con miembros publicables, en vez de callar.
+10. **Sin telemetría de adopción**: no hay forma de saber si alguien usa el
+    paquete más allá de las descargas de npm, y eso condiciona qué priorizar.
