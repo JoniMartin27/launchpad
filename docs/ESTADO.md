@@ -127,3 +127,32 @@ dependabot, y `actions/*@v5` (la v4 avisaba de deprecación en cada run).
    está publicado, o desactivarse.
 10. **Sin captura ni demo actualizadas** desde el rediseño: el GIF del README
     es de junio y no enseña ni el tema Fervon ni las tarjetas nuevas.
+
+---
+
+## Publicación — 2026-08-12
+
+`npx @fervon/launchpad`. [PR #14](https://github.com/JoniMartin27/launchpad/pull/14)
+(mejora #1) y [release v1.1.0](https://github.com/JoniMartin27/launchpad/releases/tag/v1.1.0).
+
+Nombres ocupados en npm: `launchpad` (0.8.1) y `mission-control` (1.2.7). Se
+publica bajo la org de la marca, que ya existía con `lookspan` de owner.
+
+Lo que no era obvio: publicar no era quitar `private: true`. Dos valores por
+defecto correctos en un checkout son absurdos instalados — escanear el padre de
+la propia carpeta (sería `node_modules`) y escribir la config al lado del código
+(sería la caché desechable de npx). Instalado escanea el **CWD** y guarda
+`.launchpad.json` **ahí**, que además es la semántica correcta: los puertos
+pertenecen al workspace, no a la instalación.
+
+Verificado con el tarball real, no con el checkout: `npm pack` → instalar el
+`.tgz` en un workspace de mentira en `%TEMP%` con tres proyectos → detecta los 3
+(Go, vite+pnpm, estático), 0 warnings, escribe la config en el sitio, la UI
+responde 200, arranca y para un proyecto liberando el puerto.
+
+**Pendiente humano:** `npm publish` lo tiene que lanzar Jonathan — la cuenta
+exige 2FA y el código de un solo uso es una credencial que el agente no debe
+introducir. Un token de automatización en npm evitaría el corte en el futuro.
+
+**85 tests.** Dependabot ya funciona: abrió 4 PRs ([#10](https://github.com/JoniMartin27/launchpad/pull/10)–[#13](https://github.com/JoniMartin27/launchpad/pull/13))
+en su primera pasada, pendientes de revisar en la siguiente iteración.
