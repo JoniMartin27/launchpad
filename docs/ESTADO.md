@@ -366,3 +366,62 @@ habría viajado al paquete publicado. Lo pilló el repaso adversarial del diff.
    workspace enorme aún bloquea; pasarlo a `fs.promises` con concurrencia
    acotada quitaría el bloqueo del todo.
 10. **Sin telemetría de adopción** más allá de las descargas de npm.
+
+---
+
+## Iteración 6 — 2026-08-12
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `8142645` · 111 tests de servidor + 7 de frontend |
+| Novedad ajena | el CI ahora corre **Veredicto** (detector de test-gaming) en modo aviso sobre cada PR — dos commits que no vienen de este loop |
+| npm | 1.1.0 · la API de descargas aún sin datos |
+| CI / PRs / issues | verde · 0 · 0 · 1 estrella · salud 100% · audit 0 |
+
+### Qué se cambió — [PR #20](https://github.com/JoniMartin27/launchpad/pull/20) (mejora #1)
+
+Cada carpeta de proyecto se vigila ahora de forma superficial, **filtrando a los
+manifiestos** que pueden cambiar la clasificación, con tope
+`settings.maxProjectWatchers` (64) porque un watcher es una instancia de inotify
+en Linux y el máximo del sistema son 128 para toda la máquina.
+
+**Hallazgo del test de ruido:** en Windows el watcher de la **raíz** ya disparaba
+por cualquier escritura dentro de cualquier proyecto (el sistema reporta la
+carpeta padre como modificada), así que un `npm install` provocaba una tanda de
+escaneos completos. Llevaba ahí desde el principio, tapado por el *debounce*.
+Arreglado comparando la lista real de subcarpetas.
+
+**Fallo de arranque que solo pilló la verificación en vivo:** el primer
+`rediscover()` tocaba `fsWatcher` en su zona muerta temporal, y eso lanza
+**incluso detrás de `?.`** — el servidor moría al arrancar y ningún test lo vio,
+porque ninguno levanta `index.js`.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **116 de servidor + 7 de frontend** |
+| Mutantes | 4 muertos (sin filtro, sin comparar listado, sin tope, sin liberar) |
+| Veredicto | ✅ sin señales de test-gaming en el diff |
+| En vivo | crear carpeta → `html5-static`; añadir `package.json` → `vite-react`; añadir `pnpm-lock.yaml` → `pnpm dev`. Todo **sin pulsar Rescan** |
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **Arrancar y parar en lote / perfiles.** Levantar front+API+DB son N clics y
+   N esperas; es el caso de uso real de quien tiene un stack.
+2. **Abrir en editor / terminal / carpeta** desde la tarjeta.
+3. **Autoreinicio al caer y persistencia entre reinicios del panel.**
+4. **`stop` bloquea hasta 2 s en POSIX** esperando al SIGTERM; debería devolver
+   `202` al instante y resolver la muerte en segundo plano.
+5. **Captura y GIF del README** son de junio: es lo primero que ve quien llega
+   desde npm y ya no se parece al producto.
+6. **Frontend: solo 7 tests de render.** Falta interacción — que pulsar Start
+   llame al endpoint correcto, que el drawer abra, que el filtro filtre.
+7. **El escaneo sigue siendo síncrono**; pasarlo a `fs.promises` con
+   concurrencia acotada quitaría el bloqueo del todo.
+8. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto.
+9. **Nadie ha probado el paquete de npm en macOS o Linux.** El CI corre los
+   tests en Linux, pero el flujo `npx` completo solo se ha verificado en Windows.
+10. **Sin telemetría de adopción** más allá de las descargas de npm.
