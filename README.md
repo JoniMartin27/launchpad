@@ -170,6 +170,30 @@ max 3) so the grid stays stable. Nested projects are named after their trail
 
 A project folder is never descended into: a monorepo stays one card.
 
+### Bringing up a whole stack
+
+Two buttons in the top bar act on what you can already see: **▶ Start N** starts
+every startable project currently shown (respecting your search and filters, and
+skipping anything already up or waiting on an install), and **⏻ Stop all** stops
+everything that is running.
+
+For a fixed set — front end, API and database, say — name it in the config:
+
+```json
+"profiles": {
+  "stack": ["api", "web", "db"]
+}
+```
+
+```sh
+curl -X POST localhost:7777/api/batch/start -H 'content-type: application/json' -d '{"profile":"stack"}'
+```
+
+Batch responses are **per project**: one that cannot start never aborts the
+rest, and the answer says exactly what happened to each — `started`,
+`already-running`, `not-runnable`, `failed` with its reason. A partial batch
+comes back as HTTP **207**, never a plain 200.
+
 ## Requirements
 
 - **Node 20+** (CI runs on Node 20 and 22). Optional, per ecosystem you actually

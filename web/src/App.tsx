@@ -7,6 +7,8 @@ import {
   restartProject,
   installProject,
   rescan as apiRescan,
+  batchStart,
+  batchStop,
   ApiClientError
 } from './api/client';
 import { deriveCardState } from './utils/presentation';
@@ -53,6 +55,7 @@ export default function App() {
   const [view, setView] = useState<ViewMode>('grid');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
+  const [batchBusy, setBatchBusy] = useState(false);
   const [rescanning, setRescanning] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
@@ -234,6 +237,60 @@ export default function App() {
     }
   }, [applySnapshot, pushToast]);
 
+  // ---- batch lifecycle ----
+  // The server acts per project and answers with one outcome each, so the toast
+  // reports what really happened rather than a blanket "done": a stack where
+  // two of five came up is the normal case, not an error state.
+  const runBatch = useCallback(
+    async (action: 'start' | 'stop', ids: string[], verb: string) => {
+      if (!ids.length) return;
+      setBatchBusy(true);
+      try {
+        const res = action === 'start' ? await batchStart({ ids }) : await batchStop({ ids });
+        const skipped = res.results.filter(
+          (r) => r.outcome === 'already-running' || r.outcome === 'not-running' || r.outcome === 'not-runnable'
+        ).length;
+        const parts = [`${res.succeeded} ${verb}`];
+        if (skipped) parts.push(`${skipped} skipped`);
+        if (res.failed) parts.push(`${res.failed} failed`);
+        pushToast({
+          kind: res.failed ? 'error' : 'info',
+          title: parts.join(' · '),
+          detail: res.results
+            .filter((r) => r.outcome === 'failed' || r.outcome === 'not-found')
+            .map((r) => `${r.id}: ${r.reason}`)
+            .join('\n') || undefined
+        });
+      } catch (e) {
+        pushToast({ kind: 'error', title: `Batch ${action} failed`, detail: (e as ApiClientError).message });
+      } finally {
+        setBatchBusy(false);
+      }
+    },
+    [pushToast]
+  );
+
+  // "Startable" is deliberately narrow: runnable, not already up, and not
+  // waiting on an install. Anything else would make the count a lie.
+  const startableVisible = useMemo(
+    () =>
+      filtered
+        .filter((p) => p.runnable && !p.needsInstall && p.status !== 'running' && p.status !== 'starting')
+        .map((p) => p.id),
+    [filtered]
+  );
+
+  const runningIds = useMemo(
+    () => projects.filter((p) => p.status === 'running' || p.status === 'starting').map((p) => p.id),
+    [projects]
+  );
+
+  const handleStartVisible = useCallback(
+    () => void runBatch('start', startableVisible, 'started'),
+    [runBatch, startableVisible]
+  );
+  const handleStopAll = useCallback(() => void runBatch('stop', runningIds, 'stopping'), [runBatch, runningIds]);
+
   // ---- open helpers ----
   const openApp = useCallback((p: Project) => {
     window.open(`http://127.0.0.1:${p.assignedPort}`, '_blank', 'noreferrer');
@@ -302,6 +359,10 @@ export default function App() {
         connected={connected}
         view={view}
         onView={setView}
+        onStartVisible={handleStartVisible}
+        onStopAll={handleStopAll}
+        startableCount={startableVisible.length}
+        batchBusy={batchBusy}
         onRescan={handleRescan}
         rescanning={rescanning}
         onNew={handleNew}

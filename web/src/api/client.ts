@@ -86,6 +86,37 @@ export function stopProject(id: string): Promise<{ ok: boolean; id: string; stat
   return request(`/api/projects/${encodeURIComponent(id)}/stop`, { method: 'POST' });
 }
 
+/** One project's outcome inside a batch. Partial success is the normal case. */
+export interface BatchItem {
+  id: string;
+  outcome: 'started' | 'stopping' | 'already-running' | 'not-running' | 'not-runnable' | 'not-found' | 'failed';
+  port?: number | null;
+  reason?: string;
+}
+
+export interface BatchResult {
+  ok: boolean;
+  action: 'start' | 'stop';
+  requested: number;
+  succeeded: number;
+  failed: number;
+  results: BatchItem[];
+}
+
+/**
+ * Start or stop several projects in one call — by id list or by named profile.
+ * Note the server answers 207 when only some of them worked, and `request`
+ * treats 2xx as success, so callers must read `failed`/`results` rather than
+ * assuming a resolved promise means everything came up.
+ */
+export function batchStart(target: { ids: string[] } | { profile: string }): Promise<BatchResult> {
+  return request('/api/batch/start', { method: 'POST', body: JSON.stringify(target) });
+}
+
+export function batchStop(target: { ids: string[] } | { profile: string }): Promise<BatchResult> {
+  return request('/api/batch/stop', { method: 'POST', body: JSON.stringify(target) });
+}
+
 export function restartProject(id: string, opts?: StartOptions): Promise<StartResponse> {
   return request<StartResponse>(`/api/projects/${encodeURIComponent(id)}/restart`, {
     method: 'POST',

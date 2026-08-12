@@ -46,10 +46,30 @@ class FakeWebSocket {
 }
 
 /** The API payload the stubbed `fetch` returns for GET /api/projects. */
-export const apiState: { projects: unknown[]; warnings: string[] } = {
+export const apiState: {
+  projects: unknown[];
+  warnings: string[];
+  /** What POST /api/batch/* answers, when a test cares. */
+  batchResponse: unknown | null;
+} = {
   projects: [],
   warnings: [],
+  batchResponse: null,
 };
+
+/** Every stubbed fetch call, so tests can assert what left the browser. */
+export const calls: Array<{ url: string; init?: RequestInit }> = [];
+
+/** The calls whose URL contains `fragment`. */
+export function fetchCalls(fragment: string) {
+  return calls.filter((c) => c.url.includes(fragment));
+}
+
+/** The parsed JSON body of a recorded call. */
+export function bodyOf(call: { init?: RequestInit }): unknown {
+  const body = call.init?.body;
+  return typeof body === 'string' ? JSON.parse(body) : null;
+}
 
 /** Build a project in the exact shape SPEC §5 defines. */
 export function makeProject(over: Record<string, unknown> = {}) {
@@ -91,12 +111,22 @@ export function makeProject(over: Record<string, unknown> = {}) {
 beforeEach(() => {
   apiState.projects = [];
   apiState.warnings = [];
+  apiState.batchResponse = null;
+  calls.length = 0;
   FakeWebSocket.instances.length = 0;
   vi.stubGlobal('WebSocket', FakeWebSocket as unknown as typeof WebSocket);
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(typeof input === 'string' ? input : (input as Request).url ?? input);
+      calls.push({ url, init });
+      if (url.includes('/api/batch/')) {
+        const fallback = { ok: true, action: 'start', requested: 0, succeeded: 0, failed: 0, results: [] };
+        return new Response(JSON.stringify(apiState.batchResponse ?? fallback), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
       if (url.includes('/api/projects')) {
         return new Response(
           JSON.stringify({
