@@ -24,6 +24,16 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   with `GET /api/projects`, `/api/refresh`, `/api/rescan` and the `catalog` WS
   broadcast, and render in a banner above the grid.
 
+### Changed
+
+- **Rescans no longer freeze the server on a large workspace.** Classifying a
+  project reads and parses several files, and the watcher re-runs a full scan
+  synchronously 750 ms after any change. Detection is now cached per project
+  and validated with a cheap signature of stat() calls, invalidated by folder,
+  manifest or service-subfolder changes. Measured on a synthetic workspace:
+  300 projects **780 ms → 164 ms** per scan, 100 projects **197 ms → 94 ms**,
+  25 projects **48 ms → 24 ms**.
+
 ### Fixed
 
 - **The published-version badge no longer points at somebody else's package.**
