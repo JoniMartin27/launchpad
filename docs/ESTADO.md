@@ -302,3 +302,67 @@ lookspan) se cubre con un override `registry` por proyecto.
    cuando detecte una raíz privada con miembros publicables, en vez de callar.
 10. **Sin telemetría de adopción**: no hay forma de saber si alguien usa el
     paquete más allá de las descargas de npm, y eso condiciona qué priorizar.
+
+---
+
+## Iteración 5 — 2026-08-12
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `c468e02` · 104 tests de servidor + 7 de frontend |
+| npm | 1.1.0 publicado (la API de descargas aún sin datos: se publicó hoy) |
+| CI / PRs / issues | verde en 4 jobs · 0 · 0 · 1 estrella · salud 100% · audit 0 |
+
+### Qué se cambió — [PR #19](https://github.com/JoniMartin27/launchpad/pull/19) (mejora #1)
+
+**Medido antes de tocar nada**, con un workspace sintético: 25 proyectos 48 ms,
+100 → 197 ms, **300 → 780 ms** (peor caso 2,2 s) por escaneo, todo **síncrono
+sobre el bucle de eventos** y disparado por el watcher 750 ms después de
+cualquier cambio. En un workspace grande, guardar un fichero congelaba el
+servidor entero.
+
+Clasificación cacheada por proyecto, validada con una firma de solo `stat()`.
+**Medido después: 300 → 164 ms (4,8×)**, 100 → 94 ms, 25 → 24 ms, workspace real
+32 → 15 ms.
+
+Lo importante no es el número sino que la caché no mienta: 7 tests fijan cada
+forma de cambiar un proyecto, incluido **dos proyectos con firma idéntica** que
+solo la ruta distingue. Tres mutantes muertos — y el de la clave **sobrevivió al
+primer intento**, porque mi test de colisión no probaba nada; reescrito hasta
+matarlo.
+
+**Un byte NUL literal** se me coló en la clave de caché por un round-trip de
+ediciones: funcionaba, pero `grep` pasó a tratar el fichero como binario y
+habría viajado al paquete publicado. Lo pilló el repaso adversarial del diff.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **111 de servidor + 7 de frontend** |
+| Escaneo | 300 proyectos en 164 ms (eran 780) |
+| CI / PRs / issues | verde en 4 jobs · 0 · 0 |
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **Editar un manifiesto no dispara rescan.** El watcher es deliberadamente
+   superficial (vigilar dentro de cada proyecto lo inundaría de escrituras de
+   `node_modules`), así que añadir un `package.json` a un proyecto existente no
+   se ve hasta pulsar Rescan. Medido en vivo esta iteración. Un watcher que
+   mire solo los manifiestos conocidos de cada proyecto lo arreglaría.
+2. **Arrancar y parar en lote / perfiles.** Levantar front+API+DB son N clics.
+3. **Abrir en editor / terminal / carpeta** desde la tarjeta.
+4. **Autoreinicio al caer y persistencia entre reinicios del panel.**
+5. **`stop` bloquea hasta 2 s en POSIX** esperando al SIGTERM; debería devolver
+   `202` al instante y resolver la muerte en segundo plano.
+6. **Captura y GIF del README** son de junio: es lo primero que ve quien llega
+   desde npm, y ya no se parece al producto.
+7. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto.
+8. **Frontend: solo 7 tests de render.** Falta interacción — que pulsar Start
+   llame al endpoint correcto, que el drawer abra, que el filtro filtre.
+9. **El escaneo sigue siendo síncrono.** La caché baja el coste 5× pero un
+   workspace enorme aún bloquea; pasarlo a `fs.promises` con concurrencia
+   acotada quitaría el bloqueo del todo.
+10. **Sin telemetría de adopción** más allá de las descargas de npm.
