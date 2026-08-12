@@ -154,15 +154,28 @@ export class Catalog {
     return this.runtime.get(id) || null;
   }
 
-  /** Create/replace runtime state for a launch. */
+  /**
+   * Create/replace runtime state for a launch. Stamps `statusChangedAt` like
+   * `setStatus` does, so a port probe taken before this launch is not mistaken
+   * for evidence about it.
+   */
   setRuntime(id, state) {
-    this.runtime.set(id, { ...state });
+    this.runtime.set(id, { statusChangedAt: Date.now(), ...state });
   }
 
-  /** Patch status-related fields on existing runtime. */
+  /**
+   * Patch status-related fields on existing runtime. A change of `status` also
+   * stamps `statusChangedAt`, which is what lets `toProject` tell a port probe
+   * taken BEFORE the transition from one taken after it (see the portInUse
+   * freshness check there).
+   */
   setStatus(id, patch) {
     const cur = this.runtime.get(id) || {};
-    this.runtime.set(id, { ...cur, ...patch });
+    const next = { ...cur, ...patch };
+    if (patch.status !== undefined && patch.status !== cur.status) {
+      next.statusChangedAt = Date.now();
+    }
+    this.runtime.set(id, next);
   }
 
   /** Clear the live child reference after exit (keep last status/exitCode). */
@@ -284,9 +297,12 @@ export class Catalog {
       // When we're actively running the process, the assigned port IS in use
       // and owned by us — force true so a stale/empty metrics probe can't
       // contradict the live status. Only when not running do we trust the
-      // metrics port probe (which may detect a foreign listener).
-      portInUse: running ? true : (metrics?.port?.inUse ?? false),
-      portOwnedByUs: running ? true : (metrics?.port?.ownedByUs ?? false),
+      // metrics port probe (which may detect a foreign listener) — and only if
+      // that probe was taken AFTER the last status change. Otherwise a card
+      // stayed "port in use" for the rest of the metrics TTL (up to 60s) after
+      // a stop that had already freed the port.
+      portInUse: running ? true : probeIsFresh(metrics, rt) ? metrics.port.inUse : false,
+      portOwnedByUs: running ? true : probeIsFresh(metrics, rt) ? metrics.port.ownedByUs : false,
 
       // ---- friendly status (SPEC item 2) ----
       // needsInstall: dependencies (node_modules / venv) appear missing.
@@ -327,6 +343,26 @@ export class Catalog {
     }
     return out;
   }
+}
+
+/**
+ * Was the cached port probe taken after the project's last status change?
+ *
+ * The metrics cache has a 60s TTL, so right after a stop it still holds the
+ * probe from while the server was up — the card kept claiming the port was in
+ * use long after it had been freed. A probe older than the transition tells us
+ * nothing about the current state, so we treat it as "unknown" (false) until
+ * the warmer re-probes.
+ *
+ * @param {object|null} metrics  warm metrics blob (has ISO `fetchedAt`)
+ * @param {object|null} rt       runtime state (has ms `statusChangedAt`)
+ * @returns {boolean}
+ */
+export function probeIsFresh(metrics, rt) {
+  if (!metrics?.port) return false;
+  if (!rt?.statusChangedAt) return true; // never transitioned → nothing to invalidate
+  const probedAt = Date.parse(metrics.fetchedAt);
+  return Number.isFinite(probedAt) && probedAt >= rt.statusChangedAt;
 }
 
 /**

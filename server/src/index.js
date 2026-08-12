@@ -204,6 +204,15 @@ process.on('exit', () => {
       if (process.platform === 'win32') {
         // Synchronous best-effort kill (exit handlers can't await).
         execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+      } else {
+        // POSIX: children are spawned detached, so `-pid` is their process
+        // group. Without this branch a hard exit orphaned every dev server —
+        // they survived the dashboard and kept holding their ports.
+        try {
+          process.kill(-pid, 'SIGKILL');
+        } catch {
+          process.kill(pid, 'SIGKILL');
+        }
       }
     } catch {
       /* ignore */
