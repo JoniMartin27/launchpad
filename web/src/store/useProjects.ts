@@ -324,6 +324,16 @@ export function useProjects() {
     setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
   }, []);
 
+  /**
+   * Replace one project with the server's fresh copy. Used after a config
+   * change: the server has already validated, persisted and re-run discovery,
+   * so its answer is the truth — patching a guess into the grid instead would
+   * drift from it.
+   */
+  const setLocalProject = useCallback((next: Project) => {
+    setProjects((prev) => prev.map((p) => (p.id === next.id ? { ...p, ...next } : p)));
+  }, []);
+
   const setLocalInstalling = useCallback((id: string, installing: boolean) => {
     setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, installing } : p)));
     if (installing) setInstallLogs((prev) => ({ ...prev, [id]: [] }));
@@ -347,6 +357,7 @@ export function useProjects() {
     pushToast,
     dismissToast,
     setLocalStatus,
+    setLocalProject,
     setLocalInstalling
   };
 }

@@ -9,6 +9,7 @@ import {
   rescan as apiRescan,
   batchStart,
   openIn,
+  updateProjectConfig,
   batchStop,
   ApiClientError
 } from './api/client';
@@ -45,6 +46,7 @@ export default function App() {
     pushToast,
     dismissToast,
     setLocalStatus,
+    setLocalProject,
     setLocalInstalling
   } = store;
 
@@ -306,6 +308,26 @@ export default function App() {
     [pushToast]
   );
 
+  // Arming crash recovery is a config change: the server validates it,
+  // persists it and re-runs discovery, so the fresh project comes back in the
+  // response and we splice it into the grid rather than guessing.
+  const handleToggleAutoRestart = useCallback(
+    async (id: string, on: boolean) => {
+      try {
+        const updated = await updateProjectConfig(id, { autoRestart: on });
+        setLocalProject(updated);
+        pushToast({
+          kind: 'info',
+          projectId: id,
+          title: on ? `${id} will restart itself if it crashes` : `${id} will stay down if it crashes`
+        });
+      } catch (e) {
+        pushToast({ kind: 'error', projectId: id, title: "Couldn't change that setting", detail: (e as ApiClientError).message });
+      }
+    },
+    [pushToast, setLocalProject]
+  );
+
   // ---- open helpers ----
   const openApp = useCallback((p: Project) => {
     window.open(`http://127.0.0.1:${p.assignedPort}`, '_blank', 'noreferrer');
@@ -454,6 +476,7 @@ export default function App() {
           installLogs={installLogs[selected.id] || []}
           busy={busyIds.has(selected.id)}
           onOpenIn={handleOpenIn}
+          onToggleAutoRestart={handleToggleAutoRestart}
           onClose={() => setSelectedId(null)}
           onStart={handleStart}
           onStop={handleStop}

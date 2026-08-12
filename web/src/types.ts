@@ -50,6 +50,8 @@ export interface Project {
    * there are no logs to show for it.
    */
   adopted?: boolean;
+  /** Opt-in crash recovery: relaunch this project if it dies on its own. */
+  autoRestart?: boolean;
 
   runnable: boolean;
   command: string;

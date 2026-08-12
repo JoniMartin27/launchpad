@@ -148,6 +148,13 @@ export function ProjectCard({
         <span className="status-row">
           <StatusDot state={state} installing={p.installing} />
           <span className="status-label">{statusLabel(state, p)}</span>
+          {/* Armed crash recovery changes what this card will do without you,
+              so it has to be visible from the grid, not buried in a JSON file. */}
+          {p.autoRestart && (
+            <span className="auto-restart-mark" title="Restarts automatically if it crashes" aria-label="auto-restart on">
+              ↺
+            </span>
+          )}
         </span>
         <TypeBadge project={p} />
       </header>

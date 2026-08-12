@@ -23,6 +23,11 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     that hiccups twice a day is never eventually refused.
 - `settings.portlessGraceMs`: how long a portless project (bot, CLI) must stay
   alive before it counts as running. Was a hardcoded 2.5s.
+- **Crash recovery is reachable and visible.** A switch in the drawer arms it
+  per project, and an armed card is marked in the grid. It was previously only
+  settable by hand-editing a JSON file, which meant almost nobody would find it
+  — and something that changes what a project does *without you* has no business
+  being invisible.
 
 - **A dashboard that died badly no longer strands your dev servers.** An orderly
   shutdown kills its children, but a hard kill — Task Manager, `kill -9`, a

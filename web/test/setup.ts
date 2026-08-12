@@ -121,6 +121,15 @@ beforeEach(() => {
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(typeof input === 'string' ? input : (input as Request).url ?? input);
       calls.push({ url, init });
+      if (url.includes('/config')) {
+        // Echo the change back the way the server does: validated, persisted,
+        // and returning the fresh project.
+        const body = init?.body ? JSON.parse(String(init.body)) : {};
+        return new Response(JSON.stringify({ ...makeProject(), ...body }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
       if (url.includes('/api/open')) {
         if (apiState.openFails) {
           return new Response(JSON.stringify({ error: apiState.openFails }), {
