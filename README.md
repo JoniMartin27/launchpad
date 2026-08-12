@@ -117,7 +117,9 @@ npm run dev        # Fastify (:7777) + Vite (:5180) with HMR
 ### Tests
 
 ```sh
-npm test           # server suite — 85 tests via node:test
+npm test           # 96 server tests (node:test) + 7 frontend smoke tests (vitest)
+npm run test:server
+npm run test:web
 ```
 
 ## How it works

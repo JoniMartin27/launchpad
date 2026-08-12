@@ -33,9 +33,14 @@ don't want the dashboard scanning your real workspace while you test discovery.
 ## Before you open a pull request
 
 ```sh
-npm test           # server suite (node:test) — must be green
+npm test           # server suite (node:test) + frontend smoke tests (vitest)
 npm run build      # tsc -b + vite build — must be green
 ```
+
+`npm run test:server` and `npm run test:web` run each half on its own. The
+frontend tests mount the real `<App/>` in a headless DOM with `fetch` and `WebSocket`
+stubbed, so they never touch a running server — and can never start, stop or
+install one of your projects by accident.
 
 CI runs both on `{ubuntu, windows} × node {20, 22}`. Process control is
 platform-specific here, so a change to launching or killing **must** be green on
