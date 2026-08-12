@@ -18,6 +18,13 @@ interface Props {
   onRescan: () => void;
   rescanning: boolean;
   onNew: () => void;
+  /** Start every startable project currently shown. */
+  onStartVisible: () => void;
+  /** Stop everything that is running. */
+  onStopAll: () => void;
+  /** How many of the visible cards could be started right now. */
+  startableCount: number;
+  batchBusy: boolean;
 }
 
 /**
@@ -36,7 +43,11 @@ export function TopBar({
   onView,
   onRescan,
   rescanning,
-  onNew
+  onNew,
+  onStartVisible,
+  onStopAll,
+  startableCount,
+  batchBusy
 }: Props) {
   const fieldRef = useRef<HTMLInputElement>(null);
 
@@ -56,6 +67,28 @@ export function TopBar({
         </div>
 
         <div className="topbar-right">
+          {/* Bringing up a stack used to be one click per project, and one wait
+              per project. These act on what you can already see. */}
+          {startableCount > 0 && (
+            <button
+              className="batch-btn"
+              onClick={onStartVisible}
+              disabled={batchBusy}
+              title={`Start the ${startableCount} startable project${startableCount === 1 ? '' : 's'} shown`}
+            >
+              ▶ Start {startableCount}
+            </button>
+          )}
+          {running + starting > 0 && (
+            <button
+              className="batch-btn danger"
+              onClick={onStopAll}
+              disabled={batchBusy}
+              title="Stop everything that is running"
+            >
+              ⏻ Stop all
+            </button>
+          )}
           <button
             className={`rescan-btn${rescanning ? ' busy' : ''}`}
             onClick={onRescan}

@@ -24,6 +24,17 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   with `GET /api/projects`, `/api/refresh`, `/api/rescan` and the `catalog` WS
   broadcast, and render in a banner above the grid.
 
+### Added
+
+- **Batch start/stop and named profiles.** `POST /api/batch/start` and
+  `/api/batch/stop` take `{ ids: [...] }` or `{ profile: "stack" }`, and the top
+  bar gains **▶ Start N** (everything startable that is currently shown) and
+  **⏻ Stop all**. Bringing up a front end, an API and a database was one click
+  and one wait each. The response is per project — one that cannot start never
+  aborts the rest — and a partial batch answers **207**, never a plain 200.
+  Profiles live under `profiles` in the config and are listed by
+  `GET /api/profiles`.
+
 ### Changed
 
 - **Editing a manifest is picked up on its own.** Adding a `package.json` to an

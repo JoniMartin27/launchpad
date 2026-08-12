@@ -749,3 +749,20 @@ a:hover { color: var(--accent-bright); }
   .pulse-sweep.active { animation: blink var(--dur-fast) 1; }
   @keyframes blink { 0% { opacity: 0.5; } 100% { opacity: 0; } }
 }
+
+/* ============================================== batch lifecycle buttons === */
+/* Bringing up a stack was one click per project. These sit next to Rescan and
+   act on what is already on screen; the destructive one is tinted, not red, so
+   the bar does not shout. */
+.batch-btn {
+  height: 30px; padding: 0 var(--sp-3);
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  border: 1px solid var(--border); border-radius: var(--radius-sm, 8px);
+  background: var(--slate-2); color: var(--slate-8);
+  font-size: var(--fs-xs, 0.8125rem); font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.batch-btn:hover:not(:disabled) { background: var(--slate-3); border-color: var(--accent-muted); color: var(--slate-9); }
+.batch-btn:disabled { opacity: 0.5; cursor: default; }
+.batch-btn.danger:hover:not(:disabled) { border-color: var(--status-err, #e0480f); color: var(--status-err, #e0480f); }

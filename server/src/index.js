@@ -153,7 +153,7 @@ const launcher = new Launcher({ catalog, ws: wsProxy, settings });
 // 6. Register REST routes.
 // ---------------------------------------------------------------------------
 await app.register(projectsRoutes, { catalog });
-await app.register(lifecycleRoutes, { catalog, launcher });
+await app.register(lifecycleRoutes, { catalog, launcher, store });
 await app.register(gitRoutes, { catalog });
 await app.register(metricsRoutes, { catalog, settings });
 await app.register(logsRoutes, { catalog });

@@ -206,6 +206,24 @@ export function validateConfig(config) {
     }
   }
 
+  // Named batches: { "stack": ["api", "web", "db"] }. Members are checked
+  // against the catalog at call time, not here — a profile may legitimately
+  // name a project that is temporarily absent from disk.
+  const profiles = config.profiles;
+  if (profiles !== undefined) {
+    if (typeof profiles !== 'object' || profiles === null || Array.isArray(profiles)) {
+      errors.push('profiles must be an object of name → [projectId]');
+    } else {
+      for (const [name, ids] of Object.entries(profiles)) {
+        if (!Array.isArray(ids) || ids.some((v) => typeof v !== 'string')) {
+          errors.push(`profiles.${name} must be an array of project ids`);
+        } else if (!ids.length) {
+          errors.push(`profiles.${name} is empty`);
+        }
+      }
+    }
+  }
+
   return { ok: errors.length === 0, errors };
 }
 

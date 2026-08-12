@@ -29,5 +29,11 @@
         "name": "my-app"
       }
     }
+  },
+  "profiles": {
+    "stack": [
+      "api",
+      "web"
+    ]
   }
 }
