@@ -451,7 +451,12 @@ const detectCache = new Map();
 
 // Every file whose CONTENT can change what we detect. Creating or deleting one
 // is caught by the folder's own mtime; editing one needs its own stat.
-const SIGNATURE_FILES = [
+/**
+ * Files whose creation, deletion or edit can change how a project is
+ * classified. Shared with the watcher, which uses the same list to decide
+ * whether a change inside a project folder is worth a rescan at all.
+ */
+export const SIGNATURE_FILES = [
   'package.json',
   'pnpm-workspace.yaml',
   'pnpm-lock.yaml',

@@ -51,8 +51,10 @@ replaces all of that with one screen.
 - **Health** — npm/PyPI published version + GitHub CI status (via `gh`), cached.
 - **Friendly failures** — missing `node_modules`? A one-click **Install** button.
   Missing env/token? A clear hint instead of a red wall.
-- **Live re-scan** — drop a new project folder in and it animates into the grid
-  (filesystem watcher), no restart.
+- **Live re-scan** — drop a new project folder in and it animates into the grid,
+  and edit a project's manifest (or add a lockfile) and its card re-classifies
+  itself. No restart, no Rescan button. Watching is filtered to the manifests
+  that matter, so build output costs nothing.
 - **Clean process control** — start/stop with a full process-tree kill on both
   platforms (`taskkill /T /F` on Windows; SIGTERM to the process group, then
   SIGKILL, on macOS/Linux), so nothing is left holding a port.
@@ -156,7 +158,7 @@ the dashboard. Per project you can override:
 | `registry` | Where the published-version badge looks: `{ "kind": "npm"|"pypi"|"none", "name": "pkg" }`. Only needed when the manifest cannot say it — e.g. a `private` workspace root whose published package is a member. |
 
 Global settings live under `settings` (`projectsRoot`, `dashboardPort`,
-`portRange`, `metricsTtlSec`, `readyRegex`, `autoScan`, `scanDepth`).
+`portRange`, `metricsTtlSec`, `readyRegex`, `autoScan`, `scanDepth`, `maxProjectWatchers`).
 
 ### Projects in subfolders
 

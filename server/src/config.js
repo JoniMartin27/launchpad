@@ -94,6 +94,10 @@ export const DEFAULT_SETTINGS = {
   // layout — or just let discovery notice the empty result and widen the search
   // on its own, which it will tell you about.
   scanDepth: 1,
+  // Upper bound on per-project manifest watchers. One fs.watch is one inotify
+  // instance on Linux and the OS default is 128 for the whole machine, so this
+  // stays well under it; projects past the cap still refresh on Rescan.
+  maxProjectWatchers: 64,
   readyRegex: 'ready in|listening on|Local:\\s+http|started server|compiled|running at',
 };
 

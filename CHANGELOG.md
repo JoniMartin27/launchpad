@@ -26,6 +26,19 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Editing a manifest is picked up on its own.** Adding a `package.json` to an
+  existing project, or a lockfile that changes which package manager runs it,
+  used to stay invisible until somebody pressed Rescan: the watcher only saw
+  folders appear and disappear at the root. Each project folder is now watched
+  shallowly, filtered to the manifests that can change a classification, so
+  build output and editor temp files still cost nothing. Bounded by
+  `settings.maxProjectWatchers` (64), because one watcher is one inotify
+  instance on Linux; past the cap the dashboard says so instead of failing.
+- **Installing dependencies no longer triggers a storm of rescans on Windows.**
+  Windows reports a change on the parent folder for churn inside a child, so
+  every write inside any project fired the root watcher — and every one of those
+  was a full rescan. It now compares the actual list of child folders and reacts
+  only to a real structural change.
 - **Rescans no longer freeze the server on a large workspace.** Classifying a
   project reads and parses several files, and the watcher re-runs a full scan
   synchronously 750 ms after any change. Detection is now cached per project
