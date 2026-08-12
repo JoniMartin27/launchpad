@@ -6,7 +6,30 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Open a project in your editor straight from the grid** — one button on the
+  card, no drawer trip. The folder and terminal targets stay in the drawer:
+  three more buttons per card would drown the grid.
+- **Subprojects can be opened on their own.** In a `backend/`+`frontend/` repo
+  the folder you want is usually the service, not its parent.
+
+### Changed
+
+- **Error toasts wait to be dismissed.** "It kept crashing, so it stays down"
+  or "that port is taken" are things you have to act on; fading after six
+  seconds is exactly how you miss them while looking at your editor. News and
+  progress still disappear on their own.
+
 ### Fixed
+
+- **A setting changed at runtime now reaches the code that uses it.**
+  `PATCH /api/config` built a new settings object and swapped it into the
+  store — but the launcher, the routes and the warmer all captured
+  `config.settings` at boot and kept reading the old one. Changing
+  `editorCommand`, `autoRestartMax` or `readyRegex` from the API did nothing
+  until the next restart, and *looked* like it worked because the file on disk
+  really did change.
 
 - **The port guard could not see IPv6.** Before launching, Mission Control
   checks that the assigned port is free — but it only ever checked `127.0.0.1`

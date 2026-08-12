@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { Project } from '../types';
+import type { Project, OpenTarget } from '../types';
 import { StatusDot } from './StatusDot';
 import { TypeBadge } from './TypeBadge';
 import { MetricChip } from './MetricChip';
@@ -27,6 +27,8 @@ interface Props {
   onRestart: (id: string) => void;
   onInstall: (id: string) => void;
   onOpenApp: (project: Project) => void;
+  /** Hand this project's path to the editor, straight from the grid. */
+  onOpenIn: (id: string, target: OpenTarget) => void;
 }
 
 /**
@@ -46,7 +48,8 @@ export function ProjectCard({
   onStop,
   onRestart,
   onInstall,
-  onOpenApp
+  onOpenApp,
+  onOpenIn
 }: Props) {
   const state = deriveCardState(p);
   const suppress = telemetrySuppressed(state);
@@ -221,6 +224,16 @@ export function ProjectCard({
               onClick={() => onOpenApp(p)}
             >
               ↗ Open
+            </button>
+            {/* The single most frequent reason to touch a card is "take me to
+                this code". The other two targets (folder, terminal) live in the
+                drawer — three more buttons per card would drown the grid. */}
+            <button
+              className="act-btn open-editor"
+              title="Open in your editor"
+              onClick={() => onOpenIn(p.id, 'editor')}
+            >
+              ⌨
             </button>
             <button className="act-btn more" title="Details" onClick={() => onSelect(p.id)}>
               ⋯

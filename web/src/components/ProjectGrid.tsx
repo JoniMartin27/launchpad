@@ -1,4 +1,4 @@
-import type { Project } from '../types';
+import type { Project, OpenTarget } from '../types';
 import type { ViewMode } from './ViewToggle';
 import { ProjectCard } from './ProjectCard';
 import { SkeletonCard } from './SkeletonCard';
@@ -22,6 +22,7 @@ interface Props {
   onRestart: (id: string) => void;
   onInstall: (id: string) => void;
   onOpenApp: (project: Project) => void;
+  onOpenIn: (id: string, target: OpenTarget) => void;
 }
 
 /**
@@ -74,6 +75,7 @@ export function ProjectGrid(props: Props) {
           onRestart={props.onRestart}
           onInstall={props.onInstall}
           onOpenApp={props.onOpenApp}
+          onOpenIn={props.onOpenIn}
         />
       ))}
     </div>
