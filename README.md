@@ -122,7 +122,7 @@ npm run dev        # Fastify (:7777) + Vite (:5180) with HMR
 ### Tests
 
 ```sh
-npm test           # 165 server tests (node:test) + 23 frontend tests (vitest)
+npm test           # 169 server tests (node:test) + 27 frontend tests (vitest)
 npm run test:server
 npm run test:web
 ```

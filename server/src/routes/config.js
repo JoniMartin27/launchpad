@@ -25,8 +25,13 @@ export default async function configRoutes(app, ctx) {
       reply.code(422);
       return { error: { code: 'CONFIG_INVALID', message: v.errors.join('; '), details: { errors: v.errors } } };
     }
-    store.config = next;
-    saveConfig(next);
+    // Apply the change IN PLACE. `mergeSettings` builds a fresh object, but the
+    // launcher, the routes and the warmer all captured `config.settings` at
+    // boot — so replacing it left every one of them reading the old values.
+    // The file on disk did change, which is what made this look like it worked:
+    // the new setting quietly took effect on the next restart and not before.
+    Object.assign(store.config.settings, next.settings);
+    saveConfig(store.config);
     rediscover();
     return store.config;
   });

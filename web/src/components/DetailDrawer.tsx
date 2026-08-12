@@ -287,6 +287,16 @@ export function DetailDrawer(props: Props) {
                     <span className="sp-name">{s.name}</span>
                     <span className="sp-port">:{s.assignedPort}</span>
                     <div className="sp-actions">
+                      {/* A subproject is a folder like any other, and the one
+                          you most often want to open is the service you are
+                          actually working on — not its parent. */}
+                      <button
+                        className="act-btn ghost sm"
+                        title={`Open ${s.name} in your editor`}
+                        onClick={() => props.onOpenIn(s.id, 'editor')}
+                      >
+                        ⌨
+                      </button>
                       {s.status === 'running' || s.status === 'starting' ? (
                         <button className="act-btn stop sm" onClick={() => props.onStop(s.id)}>
                           ⏻

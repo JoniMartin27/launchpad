@@ -442,6 +442,7 @@ export default function App() {
             loading={loading}
             error={error}
             busyIds={busyIds}
+            onOpenIn={handleOpenIn}
             highlightIds={highlightIds}
             view={view}
             hasActiveFilters={hasActiveFilters}

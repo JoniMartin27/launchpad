@@ -184,3 +184,86 @@ describe('crash recovery from the UI', () => {
     expect(screen.queryByText(/Bring it back automatically/)).toBeNull();
   });
 });
+
+describe('reaching a project, and warnings that stay put', () => {
+  test('the grid itself can open a project in the editor', async () => {
+    apiState.projects = [makeProject({ id: 'demo', name: 'demo' })];
+    render(<App />);
+    await screen.findByText('demo');
+
+    // On the card, not in the drawer: no click-through required.
+    const card = document.querySelector('.card') as HTMLElement;
+    const btn = card.querySelector('.act-btn.open-editor') as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    btn.click();
+
+    await waitFor(() => expect(fetchCalls('/api/open').length).toBe(1));
+    expect(bodyOf(fetchCalls('/api/open')[0])).toEqual({ id: 'demo', target: 'editor' });
+    // And the drawer did not open just because we clicked inside the card.
+    expect(document.querySelector('.drawer')).toBeNull();
+  });
+
+  test('a subproject can be opened on its own, not just its parent', async () => {
+    apiState.projects = [
+      makeProject({
+        id: 'mono',
+        name: 'mono',
+        subprojects: [
+          {
+            id: 'mono-backend',
+            name: 'backend',
+            path: '/code/mono/backend',
+            type: 'express-node',
+            command: 'npm run dev',
+            assignedPort: 4001,
+            defaultPort: 3000,
+            portStrategy: 'env PORT',
+            status: 'stopped',
+            pid: null,
+            portInUse: false,
+          },
+        ],
+      }),
+    ];
+    render(<App />);
+    (await screen.findByText('mono')).click();
+
+    const btn = await screen.findByTitle('Open backend in your editor');
+    btn.click();
+    await waitFor(() => expect(fetchCalls('/api/open').length).toBe(1));
+    // The SUBPROJECT id, not the parent's: opening the wrong folder is the
+    // whole failure mode here.
+    expect(bodyOf(fetchCalls('/api/open')[0])).toEqual({ id: 'mono-backend', target: 'editor' });
+  });
+
+  test('an error toast waits to be dismissed; news does not', async () => {
+    apiState.projects = [makeProject({ id: 'demo', name: 'demo' })];
+    apiState.openFails = { code: 'TOOL_MISSING', message: 'Could not run `code`.' };
+    render(<App />);
+    await screen.findByText('demo');
+    (document.querySelector('.card .act-btn.open-editor') as HTMLButtonElement).click();
+
+    await waitFor(() => expect(document.querySelectorAll('.toast').length).toBe(1));
+    // Six seconds is exactly how you miss something you had to act on.
+    await new Promise((r) => setTimeout(r, 6500));
+    expect(document.querySelectorAll('.toast').length).toBe(1);
+    expect(document.querySelector('.toast')?.getAttribute('data-kind')).toBe('error');
+  }, 15000);
+
+  test('…but news still gets out of the way on its own', async () => {
+    // The other half of the rule. Without this, making EVERY toast permanent
+    // would pass just as happily, and the surface would fill with notices
+    // nobody has any reason to dismiss.
+    apiState.projects = [makeProject({ id: 'demo', name: 'demo', autoRestart: false })];
+    render(<App />);
+    (await screen.findByText('demo')).click();
+    const box = (await screen.findByText(/Bring it back automatically/))
+      .closest('label')!
+      .querySelector('input') as HTMLInputElement;
+    box.click();
+
+    await waitFor(() => expect(document.querySelectorAll('.toast[data-kind="info"]').length).toBe(1));
+    await new Promise((r) => setTimeout(r, 6500));
+    expect(document.querySelectorAll('.toast[data-kind="info"]').length).toBe(0);
+  }, 15000);
+});

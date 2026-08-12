@@ -52,8 +52,13 @@ export function useProjects() {
   // ---- toasts ----
   const pushToast = useCallback((t: Omit<Toast, 'id'>): number => {
     const id = toastSeq++;
-    setToasts((prev) => [{ id, ...t }, ...prev].slice(0, 6));
-    if (!t.sticky) {
+    // An error is something you have to do something about — "it kept crashing,
+    // so it stays down", "that port is taken". Letting those fade after six
+    // seconds means missing them entirely if you were looking at your editor.
+    // News and progress still disappear on their own.
+    const sticky = t.sticky ?? t.kind === 'error';
+    setToasts((prev) => [{ id, ...t, sticky }, ...prev].slice(0, 6));
+    if (!sticky) {
       setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 6000);
     }
     return id;
