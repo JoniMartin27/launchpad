@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Project, GitInfo } from '../types';
+import type { Project, GitInfo, OpenTarget } from '../types';
 import { getGit } from '../api/client';
 import { ws } from '../api/ws';
 import { LogConsole } from './LogConsole';
@@ -27,6 +27,8 @@ interface Props {
   onInstall: (id: string) => void;
   onClearLogs: (id: string) => void;
   onOpenApp: (project: Project) => void;
+  /** Hand the project path to the editor, the file manager or a terminal. */
+  onOpenIn: (id: string, target: OpenTarget) => void;
 }
 
 /**
@@ -166,6 +168,19 @@ export function DetailDrawer(props: Props) {
                 </button>
               </>
             )}
+            {/* The `cd` the README promises to save. The path is already known;
+                these just hand it to the tool you would have typed it into. */}
+            <span className="open-group" role="group" aria-label="Open this project">
+              <button className="act-btn ghost" title="Open in your editor" onClick={() => props.onOpenIn(p.id, 'editor')}>
+                ⌨
+              </button>
+              <button className="act-btn ghost" title="Open the folder" onClick={() => props.onOpenIn(p.id, 'folder')}>
+                🗀
+              </button>
+              <button className="act-btn ghost" title="Open a terminal here" onClick={() => props.onOpenIn(p.id, 'terminal')}>
+                ›_
+              </button>
+            </span>
             <button className="drawer-close" onClick={props.onClose} aria-label="Close" title="Close (Esc)">
               ✕
             </button>

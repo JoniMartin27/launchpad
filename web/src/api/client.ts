@@ -2,6 +2,7 @@
 // All calls go through the Vite proxy in dev (/api → 127.0.0.1:7777) and are
 // same-origin in the production single-port build.
 
+import type { OpenTarget } from '../types';
 import type {
   ProjectsResponse,
   Project,
@@ -185,6 +186,7 @@ export function installProject(id: string): Promise<InstallResponse> {
   });
 }
 
-export function openInVsCode(id: string): Promise<{ ok: boolean }> {
-  return request('/api/open', { method: 'POST', body: JSON.stringify({ id }) });
+/** Hand a project's path to the editor, the file manager, or a terminal. */
+export function openIn(id: string, target: OpenTarget): Promise<{ ok: boolean; target: OpenTarget }> {
+  return request('/api/open', { method: 'POST', body: JSON.stringify({ id, target }) });
 }

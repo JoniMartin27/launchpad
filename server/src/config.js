@@ -98,6 +98,9 @@ export const DEFAULT_SETTINGS = {
   // instance on Linux and the OS default is 128 for the whole machine, so this
   // stays well under it; projects past the cap still refresh on Rescan.
   maxProjectWatchers: 64,
+  // Command used by the card's "open in editor" button. Anything on your PATH:
+  // code, code-insiders, subl, webstorm, nvim…
+  editorCommand: 'code',
   readyRegex: 'ready in|listening on|Local:\\s+http|started server|compiled|running at',
 };
 

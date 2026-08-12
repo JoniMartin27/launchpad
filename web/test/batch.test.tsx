@@ -100,3 +100,34 @@ describe('batch start/stop', () => {
     expect(document.body.textContent).toMatch(/already in use/);
   });
 });
+
+describe('open in editor / folder / terminal', () => {
+  test('each button hands the project id and the right target to the API', async () => {
+    apiState.projects = [makeProject({ id: 'demo', name: 'demo' })];
+    render(<App />);
+    // Open the drawer for the card.
+    (await screen.findByText('demo')).click();
+
+    for (const [title, target] of [
+      ['Open in your editor', 'editor'],
+      ['Open the folder', 'folder'],
+      ['Open a terminal here', 'terminal'],
+    ] as const) {
+      const btn = await screen.findByTitle(title);
+      btn.click();
+      await waitFor(() => expect(fetchCalls('/api/open').length).toBeGreaterThan(0));
+      const last = fetchCalls('/api/open').at(-1)!;
+      expect(bodyOf(last)).toEqual({ id: 'demo', target });
+    }
+    expect(fetchCalls('/api/open').length).toBe(3);
+  });
+
+  test('a missing editor is reported, not swallowed', async () => {
+    apiState.projects = [makeProject({ id: 'demo', name: 'demo' })];
+    apiState.openFails = { code: 'TOOL_MISSING', message: 'Could not run `code` — is it installed and on your PATH?' };
+    render(<App />);
+    (await screen.findByText('demo')).click();
+    (await screen.findByTitle('Open in your editor')).click();
+    await waitFor(() => expect(document.body.textContent).toMatch(/is it installed/));
+  });
+});

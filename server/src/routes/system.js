@@ -3,6 +3,7 @@
 
 import { execFile } from 'node:child_process';
 import { clearMetricsCache } from '../metrics.js';
+import { resolveOpenCommand, resolveOpenFallback, toolNameFor } from '../opener.js';
 
 /**
  * @param {import('fastify').FastifyInstance} app
@@ -47,24 +48,56 @@ export default async function systemRoutes(app, ctx) {
     return { ok: true, added: diff.added, removed: diff.removed, changed: diff.changed, projects, warnings: catalog.warnings || [] };
   });
 
-  // Open a project in VS Code. Path is validated against the catalog (§9).
+  // Open a project in the editor, the file manager, or a terminal. The path
+  // comes from the catalog, never from the request — and it is passed as its
+  // own argv entry with `shell: false`, so a folder named `demo & whoami`
+  // cannot run anything (see opener.js).
   app.post('/api/open', async (req, reply) => {
     const id = req.body?.id;
+    const target = req.body?.target || 'editor';
     const b = catalog.getBase(id) || catalog.getLaunchable(id);
     if (!b) {
       reply.code(404);
       return { error: { code: 'NOT_FOUND', message: `Unknown project "${id}".` } };
     }
-    // execFile with the validated, catalog-derived path only (no user string).
-    return await new Promise((resolve) => {
-      execFile('code', [b.path], { windowsHide: true, shell: true }, (err) => {
-        if (err) {
-          reply.code(503);
-          resolve({ error: { code: 'TOOL_MISSING', message: '`code` not found on PATH.' } });
-          return;
-        }
-        resolve({ ok: true });
-      });
+
+    const plan = resolveOpenCommand({
+      target,
+      dir: b.cwd || b.path,
+      editorCommand: settings?.editorCommand,
     });
+    if (plan.error) {
+      reply.code(400);
+      return { error: plan.error };
+    }
+
+    // Only a failure to LAUNCH the tool counts. A non-zero exit does not mean
+    // it did not work: `explorer.exe` returns 1 even when it opened the window,
+    // and an editor may exit non-zero for reasons of its own once it is up.
+    const run = (p) =>
+      new Promise((resolve) => {
+        execFile(p.cmd, p.args, { windowsHide: true, shell: false }, (err) => {
+          if (!err) return resolve(null);
+          const missing = err.code === 'ENOENT' || err.code === 'EACCES';
+          if (missing) return resolve(err);
+          return resolve(p.ignoreExit ? null : err);
+        });
+      });
+
+    let err = await run(plan);
+    if (err) {
+      // Windows Terminal is not installed everywhere; fall back to a plain
+      // console rather than telling the user "no terminal".
+      const alt = resolveOpenFallback({ target, dir: b.cwd || b.path });
+      if (alt) err = await run(alt);
+    }
+    if (err) {
+      reply.code(503);
+      const tool = toolNameFor(plan);
+      return {
+        error: { code: 'TOOL_MISSING', message: `Could not run \`${tool}\` — is it installed and on your PATH?` },
+      };
+    }
+    return { ok: true, target };
   });
 }
