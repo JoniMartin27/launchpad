@@ -9,6 +9,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import Fastify from 'fastify';
 import { Catalog } from '../src/catalog.js';
 import { Launcher } from '../src/launcher.js';
@@ -16,6 +19,16 @@ import lifecycleRoutes, { resolveBatchIds } from '../src/routes/lifecycle.js';
 import { parseJsonBodyAllowEmpty } from '../src/parsers.js';
 
 const SETTINGS = { portRange: { start: 4000, end: 4099 }, ringBytes: 4096, readyRegex: 'ready' };
+
+// A long-lived stand-in process. It has to be a FILE: the launcher spawns with
+// `shell: true`, and an inline `node -e "setTimeout(()=>{},60000)"` loses its
+// quotes on the way through, so /bin/sh chokes on the parentheses and the child
+// dies instantly — on Linux only. (Windows' cmd.exe swallowed it, so the first
+// version of these tests passed locally and failed in CI.)
+const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mc-batch-'));
+const SLEEPER = path.join(TMP, 'sleeper.js');
+fs.writeFileSync(SLEEPER, 'setInterval(() => {}, 1000);\n');
+const SLEEP_CMD = `node "${SLEEPER}"`;
 
 function base(id, over = {}) {
   return {
@@ -25,7 +38,7 @@ function base(id, over = {}) {
     type: 'node-cli',
     typeGroup: 'Node',
     framework: 'Node CLI',
-    command: 'node -e "setTimeout(()=>{},60000)"',
+    command: SLEEP_CMD,
     runnable: true,
     assignedPort: null,
     subprojects: [],
