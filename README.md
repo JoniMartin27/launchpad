@@ -1,5 +1,6 @@
 # 🛰️ Mission Control
 
+[![npm](https://img.shields.io/npm/v/@fervon/launchpad)](https://www.npmjs.com/package/@fervon/launchpad)
 ![License](https://img.shields.io/github/license/JoniMartin27/launchpad)
 
 > One folder, a dozen repos, one screen — no port collisions.
@@ -52,19 +53,31 @@ replaces all of that with one screen.
   Missing env/token? A clear hint instead of a red wall.
 - **Live re-scan** — drop a new project folder in and it animates into the grid
   (filesystem watcher), no restart.
-- **Clean process control** — start/stop with full process-tree kill on Windows
-  (`taskkill /T /F`), so nothing is left holding a port.
+- **Clean process control** — start/stop with a full process-tree kill on both
+  platforms (`taskkill /T /F` on Windows; SIGTERM to the process group, then
+  SIGKILL, on macOS/Linux), so nothing is left holding a port.
 
 ## Quick start
 
-Mission Control is meant to live **inside** the folder it manages:
+Run it from the folder that holds your projects:
 
+```sh
+cd ~/code
+npx @fervon/launchpad
 ```
-~/code/                     ← your projects root
-├── project-a/
-├── project-b/
-└── mission-control/        ← clone here
+
+Open <http://127.0.0.1:7777>. On first run it scans that folder, writes a
+`.launchpad.json` next to your projects (ports and per-project overrides live
+there — add it to your global gitignore if you like), and shows the grid.
+That's it. Nothing to configure, nothing installed globally.
+
+```sh
+npx @fervon/launchpad --port 7788      # dashboard on another port
+npx @fervon/launchpad --root ~/work    # scan a different folder
+npx @fervon/launchpad --help
 ```
+
+### From source
 
 ```sh
 git clone https://github.com/JoniMartin27/launchpad
@@ -74,14 +87,21 @@ npm run build      # build the web UI
 npm start          # serve UI + API + WS on http://127.0.0.1:7777
 ```
 
-Open <http://127.0.0.1:7777>. On first run it scans the parent folder, seeds a
-local `config.json`, and shows your projects. That's it.
+A checkout is meant to live **inside** the folder it manages, and scans its
+parent — it excludes itself from the grid:
 
-> **Different projects folder?** Set `MISSION_CONTROL_PROJECTS_ROOT=/path/to/code`
-> (env var) or edit `settings.projectsRoot` in `config.json`.
+```
+~/code/                     ← your projects root
+├── project-a/
+├── project-b/
+└── launchpad/              ← clone here
+```
+
+> **Different projects folder?** `--root /path/to/code`, or the env var
+> `MISSION_CONTROL_PROJECTS_ROOT`, or `settings.projectsRoot` in the config file.
 >
-> **Port 7777 already taken?** Set `MISSION_CONTROL_PORT=7788`. The env var wins
-> over `settings.dashboardPort`.
+> **Port 7777 already taken?** `--port 7788`, or `MISSION_CONTROL_PORT=7788`.
+> Flags win over env vars, which win over the config file.
 
 Mission Control excludes **itself** from the scan (by path, so the clone folder
 can be called anything), and never launches what it cannot cleanly stop: Docker
@@ -97,7 +117,7 @@ npm run dev        # Fastify (:7777) + Vite (:5180) with HMR
 ### Tests
 
 ```sh
-npm test           # server suite — 77 tests via node:test
+npm test           # server suite — 85 tests via node:test
 ```
 
 ## How it works
@@ -116,9 +136,11 @@ See [`SPEC.md`](SPEC.md) for the full REST + WebSocket contract and
 ## Configuration
 
 Discovery is **hybrid**: an automatic filesystem scan, unioned with per-project
-overrides in `config.json` (machine-local, git-ignored — see
-[`config.example.json`](config.example.json)). Edit it by hand or from the
-dashboard. Per project you can override:
+overrides in a machine-local config file — `.launchpad.json` in your projects
+folder when installed from npm, or `config.json` at the repo root in a checkout
+(git-ignored there; see [`config.example.json`](config.example.json)). Override
+it entirely with `--config` / `MISSION_CONTROL_CONFIG`. Edit it by hand or from
+the dashboard. Per project you can override:
 
 | Field | Meaning |
 |---|---|
@@ -140,8 +162,10 @@ Global settings live under `settings` (`projectsRoot`, `dashboardPort`,
   (FastAPI / Django / Flask); `go`, `cargo`, `deno`, `pnpm`, `yarn`, `bun` for
   those projects. All degrade gracefully if absent — a missing toolchain shows
   up as a friendly *needs-env* card, not a crash.
-- Built and tested on **Windows**; the launch/port logic is Windows-aware
-  (process-tree kill, dual-stack readiness probe).
+- **Windows, macOS and Linux.** CI runs the full suite on Windows *and* Linux,
+  because process control differs per platform — the tree-kill test starts a
+  real grandchild process on each and asserts it dies. Day-to-day development
+  happens on Windows.
 
 ## Security posture
 
