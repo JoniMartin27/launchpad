@@ -38,7 +38,7 @@ npm run build      # tsc -b + vite build — must be green
 ```
 
 `npm run test:server` and `npm run test:web` run each half on its own. The
-frontend tests mount the real `<App/>` in jsdom with `fetch` and `WebSocket`
+frontend tests mount the real `<App/>` in a headless DOM with `fetch` and `WebSocket`
 stubbed, so they never touch a running server — and can never start, stop or
 install one of your projects by accident.
 

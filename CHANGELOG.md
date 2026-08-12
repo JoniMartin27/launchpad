@@ -15,7 +15,7 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   folders called `api` never collide; a project folder is never descended into,
   so a monorepo stays one card.
 - **The frontend has tests.** Seven smoke tests mount the real dashboard in
-  jsdom against a stubbed API and assert that it renders, shows a card, offers
+  a headless DOM against a stubbed API and assert that it renders, shows a card, offers
   Install/Start/Stop in the right states, and surfaces the warning banner. Until
   now nothing exercised the running app: a typecheck and a bundle prove it
   compiles, and a React major bump passed CI on exactly that gap.
