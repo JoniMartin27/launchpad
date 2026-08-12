@@ -64,6 +64,12 @@ const store = { config };
 // ---------------------------------------------------------------------------
 // 2. Build the catalog + run discovery.
 // ---------------------------------------------------------------------------
+// Declared before the first rediscover(): that runs at boot, and a `let` in
+// its temporal dead zone throws even behind optional chaining.
+let ws;
+let fsWatcher;
+let warmer;
+
 const catalog = new Catalog(settings);
 
 /**
@@ -95,6 +101,10 @@ function rediscover() {
   if (warnings.length) {
     for (const w of warnings) console.warn('[discovery]', w);
   }
+  // Keep the per-project manifest watchers in step with the catalog: a project
+  // that just appeared should be watched, one that vanished should release its
+  // handle. No-op before the watcher exists (the first scan runs at boot).
+  fsWatcher?.setProjectDirs?.(projects.map((p) => p.path));
   return diff;
 }
 rediscover();
@@ -123,9 +133,7 @@ app.addHook('onRequest', async (req, reply) => {
 // 4. WS hub on the shared HTTP server (inherits loopback bind).
 //    Created after `ready()` so app.server exists; see bottom.
 // ---------------------------------------------------------------------------
-let ws;
-let fsWatcher;
-let warmer;
+// (ws / fsWatcher / warmer se declaran arriba, antes del primer rediscover)
 
 // ---------------------------------------------------------------------------
 // 5. Launcher (needs ws — created lazily via a forwarding shim so route
@@ -255,9 +263,15 @@ try {
   fsWatcher = startWatcher({
     root: settings.projectsRoot,
     depth: settings.scanDepth,
+    maxProjectWatchers: settings.maxProjectWatchers,
     onChange: () => rediscover(),
     onResult: (diff) => ws?.broadcastCatalog(diff, catalog.toProjects()),
+    onWarning: (msg) => console.warn('[watcher]', msg),
   });
+  // Arm the manifest watchers for the catalog discovered at boot (the first
+  // `rediscover()` ran before the watcher existed).
+  const watched = fsWatcher.setProjectDirs(catalog.allBase().map((p) => p.path));
+  console.log(`[mission-control] watching manifests in ${watched} project folders`);
 
   // Background metrics warmer: keeps ci/registry badges stable from first paint
   // (SPEC P0). After each pass, broadcast a catalog refresh so freshly-warmed
