@@ -156,3 +156,77 @@ introducir. Un token de automatización en npm evitaría el corte en el futuro.
 
 **85 tests.** Dependabot ya funciona: abrió 4 PRs ([#10](https://github.com/JoniMartin27/launchpad/pull/10)–[#13](https://github.com/JoniMartin27/launchpad/pull/13))
 en su primera pasada, pendientes de revisar en la siguiente iteración.
+
+---
+
+## Iteración 3 — 2026-08-12
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `bf619bf` — v1.1.0 etiquetada |
+| Tests | 94 verdes · CI verde en 4 jobs |
+| PRs abiertas | **4**, todas de dependabot en su primera pasada |
+| **Vulnerabilidades** | **2 de severidad alta** (`npm audit`) |
+| Issues / estrellas / tráfico | 0 / 1 / 10 visitas, 6 únicos, 2 clones |
+
+### Qué se cambió
+
+**[PR #15](https://github.com/JoniMartin27/launchpad/pull/15) — dependencias.**
+Los dos lotes de dependabot **chocaban entre sí** en `web/package.json`, así que
+se unificaron a mano: React 19, Vite 8, TS 7, `@fastify/static` 10, fastify 5.11,
+concurrently 10. Y lo que ninguno de los dos traía: `npm audit fix` → **2 altas a
+0** (DoS por HTTP/2 en find-my-way, confusión de host en fast-uri; ambas de
+fastify). #10 y #11 (actions) mergeadas aparte; #12 y #13 cerradas como superadas.
+
+Aviso aprendido: **el CI no ejecuta el frontend, solo lo compila**. Un salto de
+major de React pasa el listón sin despeinarse. Verificado a mano que el WS sigue
+vivo: la tarjeta pasa sola a `Running · :4009` sin recargar.
+
+**[PR #16](https://github.com/JoniMartin27/launchpad/pull/16) — subcarpetas y avisos (mejora #2).**
+Un workspace `code/trabajo/*` + `code/personal/*` enseñaba el panel **vacío y sin
+explicación**. Ahora `settings.scanDepth` (1-3), ids con la ruta para que dos
+`api` no colisionen, y ampliación automática de la búsqueda **con la profundidad
+persistida** — sin persistir, bastaba un proyecto suelto arriba para que los
+anidados desaparecieran (fallo que solo salió al probarlo en vivo, y que tiene
+test propio).
+
+De paso: **`catalog.warnings` se rellenaba desde el primer día y no lo leía
+nadie** — ni ruta, ni WS, ni UI. Choques de puerto, entradas de config apuntando
+a carpetas que ya no existen, proyectos que desaparecen con el proceso vivo:
+todo perdido en silencio. Ahora viajan por la API y se pintan en una banda.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **96 verdes** (eran 94) · CI verde en 4 jobs |
+| PRs abiertas / issues | 0 / 0 |
+| `npm audit` | **0 vulnerabilidades** (eran 2 altas) |
+| Mutantes | 3 muertos en scanDepth (sin descenso, ids sin prefijo, sin aviso) |
+| En vivo | workspace anidado: 3 tarjetas, banda visible, `scanDepth:2` persistido, y los 4 conviven al añadir uno suelto · workspace real: start → HTTP 200 → stop → puerto libre |
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **`npm publish` sigue pendiente** del 2FA humano. Mientras no esté, el badge
+   de npm del README apunta a un paquete que no resuelve y el `npx` del Quick
+   start no funciona: hoy el README promete algo que no se puede hacer.
+2. **Caché de descubrimiento por mtime.** Cada rescan relee de forma síncrona
+   todos los manifiestos, y ahora además puede recorrer 3 niveles. El watcher lo
+   dispara cada 750 ms.
+3. **Arrancar y parar en lote / perfiles.** Levantar front+API+DB son N clics.
+4. **Abrir en editor / terminal / carpeta** desde la tarjeta.
+5. **Autoreinicio al caer y persistencia entre reinicios del panel.**
+6. **`stop` bloquea hasta 2 s en POSIX** esperando al SIGTERM; debería devolver
+   `202` al instante y resolver la muerte en segundo plano.
+7. **`registryTarget` tiene nombres cableados** (`lookspan`, `inferbench`) en
+   `metrics.js`: para cualquier otra persona el badge de versión es ruido.
+8. **Captura y GIF del README** son de junio: no enseñan ni el tema Fervon, ni
+   las tarjetas nuevas, ni la banda de avisos.
+9. **El frontend no tiene ni un test.** Toda la batería es de servidor, y esta
+   iteración ha demostrado el agujero: un major de React pasa el CI sin que
+   nada compruebe que la aplicación arranca. Un smoke test de render bastaría.
+10. **Descubrimiento y arranque no cubren Docker Compose** (detectado pero no
+    lanzable, a propósito). Un `up`/`down` de verdad, con parada honesta, es la
+    pieza que falta para no tener una tarjeta muerta en pantalla.
