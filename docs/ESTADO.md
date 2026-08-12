@@ -835,3 +835,59 @@ sueltos *antes* de creerse un rojo.
    WebSocket pero la banda solo pinta avisos de descubrimiento, así que
    «reintentando en 2 s» y «me rindo» se pierden.
 10. **Sin telemetría de adopción** más allá de las descargas de npm.
+
+---
+
+## Iteración 14 — 2026-08-13
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `74aed93` · 157 tests de servidor + 18 de frontend |
+| npm | **1.1.0** — 1.2.0 y 1.3.0 etiquetadas sin publicar |
+| CI / PRs / issues | 8 checks verdes · 0 · 0 · 1 estrella · audit 0 |
+
+### Qué se cambió — [PR #29](https://github.com/JoniMartin27/launchpad/pull/29)
+
+**Corrección de la bitácora:** el punto #9 de la lista anterior («los avisos de
+autoreinicio no se ven») **era falso**. Sí se veían, como toasts. El defecto
+real era otro y más sutil: todos llegaban en **rojo de error** y con el **código
+de máquina por título**, así que `AUTO_RESTARTING` —el panel recuperando tu
+proyecto— se leía igual que `PORT_IN_USE`. Ahora el servidor manda la gravedad
+(es el único que sabe cuál es cuál) y la interfaz muestra texto para personas.
+Un test falla si un `broadcastWarning` nuevo no declara su nivel.
+
+**Y un fallo encontrado por accidente, probando lo anterior:** para provocar un
+aviso ocupé el 4009 con otro servidor… y **el panel arrancó igualmente**.
+`isPortFreeStrict` solo miraba `127.0.0.1` y `0.0.0.0`, ambos IPv4, así que un
+servidor en `::` (lo que hace `npx serve`, y Vite en Windows) era invisible: se
+lanzaba sobre un puerto ocupado y la tarjeta cantaba `running` sobre un puerto
+que sirve el contenido de otro. La sonda de disponibilidad ya se había arreglado
+para este mismo caso hace muchas iteraciones; el guardián previo, nunca.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **165 de servidor + 23 de frontend** |
+| Mutantes | 6 muertos (IPv4-solo, todo rojo, aplanar el matiz, silenciar nivel desconocido, código crudo, sin nivel en el servidor) |
+| CI | 8 checks verdes · Veredicto limpio |
+| En vivo | 4009 ocupado → Start **se niega** (antes arrancaba) y el toast dice «That port is taken» en rojo · proyecto inestable → «Bringing it back» en **azul** · arco de 4 arranques y rendición |
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **npm sigue en 1.1.0 con dos versiones etiquetadas sin publicar.** Catorce
+   iteraciones viven solo en GitHub.
+2. **Captura y GIF del README** son de junio: sin banda de avisos, sin botones
+   de lote, sin los de abrir, sin la marca de autoreinicio.
+3. **Los perfiles no se pueden crear desde la UI**, ni hay selector en la barra.
+4. **El escaneo sigue siendo síncrono**; `fs.promises` con concurrencia acotada.
+5. **`restart` sigue bloqueando** hasta 8 s esperando que el puerto se libere.
+6. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto.
+7. **La tarjeta no ofrece abrir en editor/terminal/carpeta**: hay que abrir el
+   drawer, y los subproyectos no lo ofrecen en absoluto.
+8. **`installState` asume npm/uv**: Go o Rust sin dependencias no ofrecen nada.
+9. **Los toasts duran 6 s incluso para «me rindo»**: un aviso que exige acción
+   desaparece solo. Los de nivel `error` deberían quedarse hasta descartarlos.
+10. **Sin telemetría de adopción** más allá de las descargas de npm.
