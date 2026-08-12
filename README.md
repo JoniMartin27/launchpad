@@ -153,6 +153,7 @@ the dashboard. Per project you can override:
 | `env` | Extra environment variables (`${PORT}` is substituted) |
 | `hidden` / `runnable` | Hide a card / mark it non-launchable |
 | `cwd` | Working directory |
+| `registry` | Where the published-version badge looks: `{ "kind": "npm"|"pypi"|"none", "name": "pkg" }`. Only needed when the manifest cannot say it — e.g. a `private` workspace root whose published package is a member. |
 
 Global settings live under `settings` (`projectsRoot`, `dashboardPort`,
 `portRange`, `metricsTtlSec`, `readyRegex`, `autoScan`, `scanDepth`).

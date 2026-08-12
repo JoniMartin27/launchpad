@@ -9,6 +9,8 @@
 // optional tools / network failures degrade inside the response body.
 // ---------------------------------------------------------------------------
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { isPortInUse } from './ports.js';
 
@@ -102,20 +104,85 @@ function ghLatestRun(slug) {
 }
 
 /**
- * Determine the registry kind/name for a project.
- * Heuristic: a published npm package name (from its package.json `name`) ⇒ npm;
- * a python project ⇒ pypi; otherwise none. The catalog passes hints in.
- * @param {object} project  base/merged project (has type, path)
+ * Determine which registry (if any) a project publishes to, and under what name.
+ *
+ * Read from the project's OWN manifest, never from a table of names. The
+ * previous version hardcoded `lookspan` → npm and `inferbench` → PyPI — the
+ * author's own projects — and guessed `pypi/<folder-name>` for every Python
+ * project. For anybody else that meant a version badge querying a package that
+ * has nothing to do with them, or somebody else's package entirely.
+ *
+ * The rules, all evidence-based:
+ *   - `package.json` with `private: true`     → nothing to look up.
+ *   - `package.json` with a `name`            → npm, under that exact name
+ *                                               (scopes included).
+ *   - `pyproject.toml` / `setup.py` with a
+ *     declared project name                   → PyPI, under that name.
+ *   - anything else                           → none. A missing badge beats a
+ *                                               wrong one.
+ *
+ * @param {object} project  base/merged project (has path/cwd)
  * @returns {{ kind:'npm'|'pypi'|'none', name:string|null }}
  */
 export function registryTarget(project) {
-  // Known published packages in this workspace.
-  const NPM_NAMES = { lookspan: 'lookspan' };
-  const PYPI_NAMES = { inferbench: 'inferbench' };
-  if (NPM_NAMES[project.id]) return { kind: 'npm', name: NPM_NAMES[project.id] };
-  if (PYPI_NAMES[project.id]) return { kind: 'pypi', name: PYPI_NAMES[project.id] };
-  if (project.typeGroup === 'Python') return { kind: 'pypi', name: project.id };
-  return { kind: 'none', name: null };
+  // An explicit override always wins. This is the escape hatch for the case the
+  // manifest cannot express: a workspace root marked `private: true` whose
+  // published package is one of its members. Set it per project in the config:
+  //   "lookspan": { "registry": { "kind": "npm", "name": "lookspan" } }
+  const ov = project?.registry;
+  if (ov && (ov.kind === 'npm' || ov.kind === 'pypi') && typeof ov.name === 'string' && ov.name.trim()) {
+    return { kind: ov.kind, name: ov.name.trim() };
+  }
+  if (ov && ov.kind === 'none') return NO_REGISTRY;
+
+  const dir = project?.cwd || project?.path;
+  if (!dir) return NO_REGISTRY;
+
+  // --- npm ---------------------------------------------------------------
+  const pkg = readJson(path.join(dir, 'package.json'));
+  if (pkg) {
+    // `private: true` is an explicit "never published" — respect it.
+    if (pkg.private === true) return NO_REGISTRY;
+    if (typeof pkg.name === 'string' && pkg.name.trim()) {
+      return { kind: 'npm', name: pkg.name.trim() };
+    }
+    return NO_REGISTRY;
+  }
+
+  // --- PyPI --------------------------------------------------------------
+  // `[project] name = "x"` (PEP 621) or the legacy `[tool.poetry] name = "x"`.
+  const pyproject = readText(path.join(dir, 'pyproject.toml'));
+  if (pyproject) {
+    const m = pyproject.match(/^\s*name\s*=\s*["']([^"']+)["']/m);
+    if (m) return { kind: 'pypi', name: m[1] };
+    return NO_REGISTRY;
+  }
+  const setupPy = readText(path.join(dir, 'setup.py'));
+  if (setupPy) {
+    const m = setupPy.match(/name\s*=\s*["']([^"']+)["']/);
+    if (m) return { kind: 'pypi', name: m[1] };
+  }
+  return NO_REGISTRY;
+}
+
+const NO_REGISTRY = Object.freeze({ kind: 'none', name: null });
+
+/** Read+parse a JSON file, or null. */
+function readJson(file) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+/** Read a file as text, or '' if absent/unreadable. */
+function readText(file) {
+  try {
+    return fs.readFileSync(file, 'utf8');
+  } catch {
+    return '';
+  }
 }
 
 /**

@@ -691,6 +691,10 @@ export function discover(config) {
       cwd: ov.cwd || base.path,
       portFlag: ov.portFlag ?? null,
       portEnv: ov.portEnv || 'PORT',
+      // Optional { kind, name } override for the published-version badge, for
+      // the case a manifest cannot express (a private workspace root whose
+      // published package is one of its members).
+      registry: ov.registry || null,
       env: ov.env || {},
       _seedPort: ov.port ?? null,
     });

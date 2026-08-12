@@ -3,7 +3,10 @@
   "settings": {
     "projectsRoot": "",
     "dashboardPort": 7777,
-    "portRange": { "start": 4000, "end": 4099 },
+    "portRange": {
+      "start": 4000,
+      "end": 4099
+    },
     "ringBytes": 262144,
     "metricsTtlSec": 60,
     "autoScan": true,
@@ -17,8 +20,14 @@
       "command": "npm run dev",
       "portFlag": "--port",
       "portEnv": "PORT",
-      "env": { "SOME_VAR": "value" },
-      "hidden": false
+      "env": {
+        "SOME_VAR": "value"
+      },
+      "hidden": false,
+      "registry": {
+        "kind": "npm",
+        "name": "my-app"
+      }
     }
   }
 }

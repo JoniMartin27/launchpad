@@ -24,6 +24,19 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   with `GET /api/projects`, `/api/refresh`, `/api/rescan` and the `catalog` WS
   broadcast, and render in a banner above the grid.
 
+### Fixed
+
+- **The published-version badge no longer points at somebody else's package.**
+  `registryTarget` held a lookup table of the author's own projects (`lookspan`
+  → npm, `inferbench` → PyPI) and, for anything else Python-shaped, guessed
+  `pypi/<folder-name>`. In a package other people install, that queries a
+  package that is not theirs — or does not exist. It now reads the project's own
+  manifest (`package.json` name, honouring `private: true`; `pyproject.toml` or
+  `setup.py` name), and reports nothing when nothing is declared: a missing
+  badge beats a wrong one. A per-project `registry` override covers the case a
+  manifest cannot express, such as a private workspace root whose published
+  package is one of its members.
+
 ### Changed
 
 - React 19, Vite 8, TypeScript 7, `@fastify/static` 10, fastify 5.11, ws 8.21,
