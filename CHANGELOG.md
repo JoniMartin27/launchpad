@@ -4,10 +4,24 @@ All notable changes to Mission Control are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims
 at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] — 2026-08-12
 
 ### Added
 
+- **Stopping answers immediately.** `POST /api/projects/:id/stop` now returns
+  **202** as soon as the kill is under way instead of blocking for the POSIX
+  grace window (SIGTERM, up to two seconds, then SIGKILL) — a batch stop of five
+  projects used to hold the response for ten. The final `stopped` still arrives
+  over the WebSocket, which is where the UI reads it from anyway.
+- **`npm pack` can no longer produce a tarball without the dashboard.** `files`
+  ships `web/dist`, but nothing built it: the UI only made it in because
+  whoever packed had built first. A `prepack` script now runs the build, so
+  every tarball carries the interface. Caught by the new smoke job on its first
+  run — it installed the package and got "web/dist not built".
+- **The published package is smoke-tested on Linux, macOS and Windows.** A CI
+  job packs the real tarball, installs it into a throwaway workspace of fake
+  projects, runs the CLI and asks the running server what it found. The main
+  suite proves the *source* works; nothing proved the thing people install did.
 - **Projects in subfolders are found.** `settings.scanDepth` (1–3) controls how
   many levels below the root to look. A scan that finds nothing widens the
   search on its own, explains that in a banner, and remembers the depth that

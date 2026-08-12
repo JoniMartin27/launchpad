@@ -47,10 +47,15 @@ export class Launcher {
    * @param {WsHub}  deps.ws        WebSocket hub for broadcasts
    * @param {object} deps.settings  config.settings (portRange, readyRegex…)
    */
-  constructor({ catalog, ws, settings }) {
+  constructor({ catalog, ws, settings, kill = killTree }) {
     this.catalog = catalog;
     this.ws = ws;
     this.settings = settings;
+    // Injectable so a test can supply a deliberately slow killer. Without that
+    // seam, "does stop() wait for the kill?" is only observable on POSIX (where
+    // there is a SIGTERM grace window); on Windows `taskkill /T /F` returns at
+    // once and a timing assertion passes either way.
+    this.kill = kill;
     this.readyRegex = new RegExp(settings.readyRegex || 'ready in|listening on|Local:\\s+http|started server|compiled|running at', 'i');
   }
 
@@ -328,7 +333,7 @@ export class Launcher {
    * @param {string} id
    * @returns {Promise<{status:number, body:object}>}
    */
-  async stop(id) {
+  async stop(id, { wait = false } = {}) {
     const rt = this.catalog.getRuntime(id);
     if (!rt || (rt.status !== 'running' && rt.status !== 'starting')) {
       return { status: 409, body: { error: { code: 'NOT_RUNNING', message: `${id} is not running.` } } };
@@ -337,9 +342,19 @@ export class Launcher {
     this.catalog.setStatus(id, { status: 'stopping' });
     this._broadcastStatus(id, 'stopping');
 
-    await killTree(pid);
+    // On POSIX the kill is polite first: SIGTERM, then up to a two-second grace
+    // window before SIGKILL. Awaiting that held the HTTP response hostage — and
+    // a batch stop of five projects held it for ten seconds — for no reason:
+    // the browser learns the real outcome from the `stopped` WS event that the
+    // child's own exit handler pushes. So we answer 202 (accepted, in progress)
+    // and let the kill finish in the background.
+    const killing = this.kill(pid).catch(() => {});
+    if (wait) {
+      await killing;
+      return { status: 200, body: { ok: true, id, status: 'stopping' } };
+    }
     // Final 'stopped' is pushed by the child 'exit' handler.
-    return { status: 200, body: { ok: true, id, status: 'stopping' } };
+    return { status: 202, body: { ok: true, id, status: 'stopping' } };
   }
 
   /**
@@ -351,7 +366,7 @@ export class Launcher {
     const rt = this.catalog.getRuntime(id);
     if (rt && (rt.status === 'running' || rt.status === 'starting')) {
       const port = rt.assignedPort;
-      await killTree(rt.pid);
+      await this.kill(rt.pid);
       // Wait for exit + port free (bounded).
       await waitFor(async () => {
         const cur = this.catalog.getRuntime(id);
@@ -460,7 +475,7 @@ export class Launcher {
   /** Tree-kill every tracked child (dashboard shutdown). */
   async killAll() {
     const pids = this.catalog.allTrackedPids();
-    await Promise.all(pids.map((pid) => killTree(pid)));
+    await Promise.all(pids.map((pid) => this.kill(pid)));
   }
 }
 
