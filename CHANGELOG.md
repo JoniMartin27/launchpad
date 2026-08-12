@@ -14,6 +14,11 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   worked. Nested projects are named after their trail (`work/api`) so two
   folders called `api` never collide; a project folder is never descended into,
   so a monorepo stays one card.
+- **The frontend has tests.** Seven smoke tests mount the real dashboard in
+  jsdom against a stubbed API and assert that it renders, shows a card, offers
+  Install/Start/Stop in the right states, and surfaces the warning banner. Until
+  now nothing exercised the running app: a typecheck and a bundle prove it
+  compiles, and a React major bump passed CI on exactly that gap.
 - **Discovery warnings are visible.** They were collected by the catalog and
   then read by nobody — no route, no WebSocket message, no UI. They now travel
   with `GET /api/projects`, `/api/refresh`, `/api/rescan` and the `catalog` WS
