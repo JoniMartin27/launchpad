@@ -60,3 +60,24 @@ test('framework table has expected core entries', () => {
     assert.ok(FRAMEWORKS[k], `missing framework ${k}`);
   }
 });
+
+test('a bare node entry point gets the flag with no -- separator', () => {
+  // A single-process server invoked directly (lookspan's CLI serves its API and
+  // its dashboard on one port, which is the model this launcher assumes) is not
+  // a package-manager wrapper, so no `--` may be injected: Node's parseArgs
+  // stops option parsing at `--`, and the port would be silently ignored while
+  // the process still came up — on the default port, looking fine.
+  //
+  // The framework rule here is deliberately `vite-react`: a project detected by
+  // its front-end but launched through a plain binary must still not get one.
+  const rule = ruleForType('vite-react');
+  const { cmd, args } = buildSpawnArgs({
+    command: 'node packages/cli/dist/index.js',
+    port: 4003,
+    rule,
+    portFlag: '--port',
+  });
+  assert.equal(cmd, 'node');
+  assert.ok(!args.includes('--'), 'a `--` separator would break the port flag');
+  assert.deepEqual(args, ['packages/cli/dist/index.js', '--port', '4003']);
+});
