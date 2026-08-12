@@ -56,12 +56,16 @@ export function installState(project) {
   if (!fileExists(path.join(dir, 'package.json'))) {
     return { needsInstall: false, installer: null, reason: null };
   }
+  // Honour the project's real package manager: running `npm install` inside a
+  // pnpm or yarn workspace can rewrite the lockfile and break the tree.
+  const installer = project.packageManager || 'npm';
+  const cmd = `${installer} install`;
   const nm = path.join(dir, 'node_modules');
   if (!dirExists(nm)) {
     return {
       needsInstall: true,
-      installer: 'npm',
-      reason: 'node_modules missing — run `npm install`.',
+      installer,
+      reason: `node_modules missing — run \`${cmd}\`.`,
     };
   }
   // node_modules exists but .bin is empty ⇒ an incomplete/partial install
@@ -70,11 +74,11 @@ export function installState(project) {
   if (dirExists(bin) && isEmptyDir(bin)) {
     return {
       needsInstall: true,
-      installer: 'npm',
-      reason: 'node_modules/.bin is empty — incomplete install; run `npm install`.',
+      installer,
+      reason: `node_modules/.bin is empty — incomplete install; run \`${cmd}\`.`,
     };
   }
-  return { needsInstall: false, installer: 'npm', reason: null };
+  return { needsInstall: false, installer, reason: null };
 }
 
 /**

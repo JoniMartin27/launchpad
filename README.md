@@ -30,10 +30,18 @@ replaces all of that with one screen.
 
 ## Features
 
-- **Zero-config auto-detection** — scans your projects folder and infers each
-  project's type and dev command from its own files (`package.json` scripts,
-  Vite / Next / Astro / Electron, Express/Fastify, static sites, Python/FastAPI,
-  Telegram bots, npm-workspace monorepos, and `backend/`+`frontend/` splits).
+- **Zero-config auto-detection, polyglot** — scans your projects folder and
+  infers each project's type and dev command from its own files:
+  - **JS/TS** — Vite (React / Vue / Svelte / SvelteKit / Solid / Preact), Next,
+    Nuxt, Remix, Astro, Electron, Express / Fastify / Koa / hapi / Hono / NestJS,
+    static sites, Telegram & Discord bots, CLIs, workspace monorepos, and
+    `backend/`+`frontend/` splits.
+  - **Python** — FastAPI, Django, Flask. **Go** (`go.mod`), **Rust** (`Cargo.toml`),
+    **Deno** (`deno.json` tasks). Docker Compose stacks are detected and
+    labelled (not launched — see below).
+- **Uses your package manager** — the dev and install commands follow the
+  project's lockfile: `pnpm dev` for `pnpm-lock.yaml`, `yarn` / `bun run` / `npm run`
+  likewise. Mission Control never runs `npm install` inside a pnpm workspace.
 - **Launch many at once, never a port clash** — every project gets a unique port
   in a configurable range (default `4000–4099`), injected at launch (`PORT` env +
   the right CLI flag per framework). Run five at the same time, all isolated.
@@ -71,6 +79,14 @@ local `config.json`, and shows your projects. That's it.
 
 > **Different projects folder?** Set `MISSION_CONTROL_PROJECTS_ROOT=/path/to/code`
 > (env var) or edit `settings.projectsRoot` in `config.json`.
+>
+> **Port 7777 already taken?** Set `MISSION_CONTROL_PORT=7788`. The env var wins
+> over `settings.dashboardPort`.
+
+Mission Control excludes **itself** from the scan (by path, so the clone folder
+can be called anything), and never launches what it cannot cleanly stop: Docker
+Compose stacks are shown and labelled but have no Start button, because
+`docker compose up` leaves containers that a process-tree kill would not reclaim.
 
 ### Dev mode (hot reload)
 
@@ -81,7 +97,7 @@ npm run dev        # Fastify (:7777) + Vite (:5180) with HMR
 ### Tests
 
 ```sh
-npm test           # server suite — 67 tests via node:test
+npm test           # server suite — 77 tests via node:test
 ```
 
 ## How it works
@@ -119,9 +135,11 @@ Global settings live under `settings` (`projectsRoot`, `dashboardPort`,
 
 ## Requirements
 
-- **Node 20+** (CI runs on Node 20 and 22). Optional: `git` and the GitHub
-  `gh` CLI for git/CI panels;
-  `uv` for Python/FastAPI projects. All degrade gracefully if absent.
+- **Node 20+** (CI runs on Node 20 and 22). Optional, per ecosystem you actually
+  use: `git` and the GitHub `gh` CLI for the git/CI panels; `uv` for Python
+  (FastAPI / Django / Flask); `go`, `cargo`, `deno`, `pnpm`, `yarn`, `bun` for
+  those projects. All degrade gracefully if absent — a missing toolchain shows
+  up as a friendly *needs-env* card, not a crash.
 - Built and tested on **Windows**; the launch/port logic is Windows-aware
   (process-tree kill, dual-stack readiness probe).
 

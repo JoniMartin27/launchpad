@@ -13,15 +13,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ruleForType } from './frameworks.js';
+import { REPO_ROOT } from './config.js';
 
-// Folders that are never projects.
-const SKIP_DIRS = new Set([
-  'node_modules',
-  'mission-control',
-  'notes',
-  'tmp',
-  '.git',
-]);
+// Folders that are never projects. Kept deliberately tiny and generic: the real
+// gate is `isProjectDir` (markers / own .git) plus the self-exclusion below.
+// Nothing here may encode a project or product name — Mission Control excludes
+// *itself* by resolved path, so it works whatever the clone folder is called
+// (the README tells people to clone it as `launchpad`).
+const SKIP_DIRS = new Set(['node_modules', '.git']);
 
 /**
  * Map a folder name to a stable, readable catalog id (hyphen-case). Fully
@@ -40,6 +39,43 @@ export function folderToId(folder) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
+}
+
+/**
+ * Detect which package manager a Node project uses, from its lockfile (the
+ * strongest signal) or the `packageManager` field. Running `npm run dev` in a
+ * pnpm/yarn/bun workspace is not just cosmetic — `npm install` there can rewrite
+ * or corrupt the dependency tree, and the dev script may not even resolve.
+ * @param {string} dir
+ * @param {object|null} pkg
+ * @returns {'npm'|'pnpm'|'yarn'|'bun'}
+ */
+export function detectPackageManager(dir, pkg = null) {
+  if (has(dir, 'pnpm-lock.yaml')) return 'pnpm';
+  if (has(dir, 'bun.lockb') || has(dir, 'bun.lock')) return 'bun';
+  if (has(dir, 'yarn.lock')) return 'yarn';
+  if (has(dir, 'package-lock.json')) return 'npm';
+  const declared = String(pkg?.packageManager || '').toLowerCase();
+  if (declared.startsWith('pnpm')) return 'pnpm';
+  if (declared.startsWith('yarn')) return 'yarn';
+  if (declared.startsWith('bun')) return 'bun';
+  return 'npm';
+}
+
+/**
+ * Build the command that runs `script` with the given package manager.
+ *   npm  → `npm run dev` / `npm start`      (npm has a `start` shorthand)
+ *   pnpm → `pnpm dev`    / `pnpm start`
+ *   yarn → `yarn dev`    / `yarn start`
+ *   bun  → `bun run dev` / `bun run start`
+ * @param {'npm'|'pnpm'|'yarn'|'bun'} pm
+ * @param {string} script
+ * @returns {string}
+ */
+export function runScript(pm, script) {
+  if (pm === 'pnpm' || pm === 'yarn') return `${pm} ${script}`;
+  if (pm === 'bun') return `bun run ${script}`;
+  return script === 'start' ? 'npm start' : `npm run ${script}`;
 }
 
 /** Read+parse a package.json, or null. */
@@ -71,13 +107,17 @@ function readRepoUrl(dir) {
 /**
  * Map a raw type to the front-end TypeGroup bucket (SPEC §5).
  * @param {string} type
- * @returns {'Node'|'Python'|'Static'|'Docker'|'Other'}
+ * @returns {'Node'|'Python'|'Static'|'Docker'|'Go'|'Rust'|'Other'}
  */
 export function typeGroupForType(type) {
   if (!type) return 'Other';
   const t = type.toLowerCase();
-  if (t.includes('docker')) return 'Docker';
-  if (t.includes('python') || t.includes('fastapi') || t.includes('uvicorn')) return 'Python';
+  if (t.includes('docker') || t.includes('compose')) return 'Docker';
+  if (t.includes('python') || t.includes('fastapi') || t.includes('uvicorn') || t.includes('django') || t.includes('flask')) {
+    return 'Python';
+  }
+  if (t.startsWith('go-')) return 'Go';
+  if (t.startsWith('rust-')) return 'Rust';
   if (t === 'html5-static' || t === 'astro') return 'Static';
   if (
     t.startsWith('node-') ||
@@ -85,6 +125,7 @@ export function typeGroupForType(type) {
     t.startsWith('express-') ||
     t.startsWith('electron-') ||
     t === 'next' ||
+    t === 'deno' ||
     t === 'vanilla-es-modules' ||
     t === 'monorepo'
   ) {
@@ -102,24 +143,104 @@ function isDir(p) {
   }
 }
 
-/** Does any of `files` in `dir` mention FastAPI/uvicorn? (Python web service.) */
-function looksLikeFastapi(dir) {
-  for (const f of ['main.py', 'app.py', 'server.py', 'asgi.py']) {
-    try {
-      if (/fastapi|uvicorn|starlette/i.test(fs.readFileSync(path.join(dir, f), 'utf8'))) return true;
-    } catch {
-      /* ignore */
-    }
+/** Read a file as text, or '' if absent/unreadable. */
+function readText(dir, name) {
+  try {
+    return fs.readFileSync(path.join(dir, name), 'utf8');
+  } catch {
+    return '';
   }
-  // pyproject/requirements as a fallback signal.
-  for (const f of ['pyproject.toml', 'requirements.txt']) {
-    try {
-      if (/fastapi|uvicorn|starlette/i.test(fs.readFileSync(path.join(dir, f), 'utf8'))) return true;
-    } catch {
-      /* ignore */
-    }
+}
+
+// Entry-point sources scanned for a Python web framework, plus the dependency
+// manifests as a fallback signal.
+const PY_ENTRY_FILES = ['main.py', 'app.py', 'server.py', 'asgi.py', 'wsgi.py'];
+const PY_MANIFESTS = ['pyproject.toml', 'requirements.txt', 'Pipfile'];
+
+/** Does anything in `dir` mention `re`? (Python source + manifests.) */
+function pythonMentions(dir, re) {
+  for (const f of [...PY_ENTRY_FILES, ...PY_MANIFESTS]) {
+    if (re.test(readText(dir, f))) return true;
   }
   return false;
+}
+
+/** Does any of `files` in `dir` mention FastAPI/uvicorn? (Python web service.) */
+function looksLikeFastapi(dir) {
+  return pythonMentions(dir, /fastapi|uvicorn|starlette/i);
+}
+
+/** Is there any Python project marker at all? */
+function looksLikePython(dir) {
+  return (
+    has(dir, 'pyproject.toml') ||
+    has(dir, 'requirements.txt') ||
+    has(dir, 'setup.py') ||
+    has(dir, 'Pipfile') ||
+    has(dir, 'manage.py')
+  );
+}
+
+/**
+ * Classify a non-Node ecosystem from on-disk markers: Python (Django / Flask /
+ * FastAPI), Go, Rust, Deno, Docker Compose. Returns null when nothing matches.
+ * Generic — keys off manifests and entry-point sources, never folder names.
+ * @param {string} dir
+ * @returns {{type,framework,devCommand,defaultPort,runnable}|null}
+ */
+function classifyNonNode(dir) {
+  // --- Python -------------------------------------------------------------
+  if (looksLikePython(dir)) {
+    if (has(dir, 'manage.py')) {
+      return { type: 'django-python', framework: 'Django', devCommand: null, defaultPort: 8000, runnable: true };
+    }
+    if (looksLikeFastapi(dir)) {
+      return { type: 'fastapi-python', framework: 'FastAPI (Python)', devCommand: null, defaultPort: 8000, runnable: true };
+    }
+    if (pythonMentions(dir, /\bflask\b/i)) {
+      return { type: 'flask-python', framework: 'Flask', devCommand: null, defaultPort: 5000, runnable: true };
+    }
+    return { type: 'python', framework: 'Python', devCommand: null, defaultPort: null, runnable: false };
+  }
+
+  // --- Deno ---------------------------------------------------------------
+  if (has(dir, 'deno.json') || has(dir, 'deno.jsonc')) {
+    const cfg = readText(dir, 'deno.json') || readText(dir, 'deno.jsonc');
+    const hasDevTask = /"tasks"[\s\S]*?"dev"/.test(cfg);
+    return {
+      type: 'deno',
+      framework: 'Deno',
+      devCommand: hasDevTask ? 'deno task dev' : null,
+      defaultPort: 8000,
+      runnable: hasDevTask,
+    };
+  }
+
+  // --- Go -----------------------------------------------------------------
+  if (has(dir, 'go.mod')) {
+    // Only a `main` package is runnable; a library module has no entry point.
+    const runnable = has(dir, 'main.go') || isDir(path.join(dir, 'cmd'));
+    return { type: 'go-http', framework: 'Go', devCommand: null, defaultPort: 8080, runnable };
+  }
+
+  // --- Rust ---------------------------------------------------------------
+  if (has(dir, 'Cargo.toml')) {
+    const runnable = has(dir, path.join('src', 'main.rs'));
+    return { type: 'rust-cargo', framework: 'Rust (cargo)', devCommand: null, defaultPort: 8080, runnable };
+  }
+
+  // --- Docker Compose -----------------------------------------------------
+  // Detected and labelled, but NOT launchable: `docker compose up` starts
+  // containers whose lifetime a process-tree kill cannot reclaim, so stopping
+  // the card would leave the stack running. Fail closed until compose gets
+  // first-class up/down handling.
+  for (const f of ['docker-compose.yml', 'docker-compose.yaml', 'compose.yml', 'compose.yaml']) {
+    if (has(dir, f)) {
+      return { type: 'docker-compose', framework: 'Docker Compose', devCommand: null, defaultPort: null, runnable: false };
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -132,7 +253,21 @@ function classifyLeaf(dir) {
   const pkg = readPkg(dir);
   const scripts = pkg?.scripts || {};
   const deps = { ...(pkg?.dependencies || {}), ...(pkg?.devDependencies || {}) };
-  const devCommand = scripts.dev ? 'npm run dev' : scripts.start ? 'npm start' : null;
+  const pm = detectPackageManager(dir, pkg);
+  const devCommand = scripts.dev
+    ? runScript(pm, 'dev')
+    : scripts.start
+      ? runScript(pm, 'start')
+      : null;
+
+  // A folder can carry a package.json purely for tooling (a lint config, a
+  // Tailwind build) while the actual app is Python/Go/Rust/Deno. Whenever there
+  // is no JS dev/start script to run, let the other ecosystems claim it first —
+  // otherwise those projects surface as dead "node-server" cards with no Start.
+  if (!devCommand) {
+    const other = classifyNonNode(dir);
+    if (other) return { ...other, packageManager: pm };
+  }
 
   let type = 'other';
   let framework = 'Unknown';
@@ -152,34 +287,62 @@ function classifyLeaf(dir) {
     type = 'astro';
     framework = `Astro ${stripCaret(deps.astro)}`;
     defaultPort = 4321;
-  } else if (deps.vite || deps['@vitejs/plugin-react']) {
+  } else if (deps.nuxt) {
     type = 'vite-react';
-    framework = deps.phaser ? 'Phaser 3 + Vite' : deps.vue ? 'Vite + Vue' : deps.svelte ? 'Vite + Svelte' : 'Vite + React';
+    framework = `Nuxt ${stripCaret(deps.nuxt)}`;
+    defaultPort = 3000;
+  } else if (deps['@remix-run/dev'] || deps['@react-router/dev']) {
+    type = 'vite-react';
+    framework = deps['@remix-run/dev'] ? 'Remix' : 'React Router';
     defaultPort = 5173;
-  } else if (deps['node-telegram-bot-api'] || deps.telegraf || deps.grammy) {
+  } else if (deps.vite || deps['@vitejs/plugin-react'] || deps['@sveltejs/kit']) {
+    type = 'vite-react';
+    framework = deps['@sveltejs/kit']
+      ? 'SvelteKit'
+      : deps.phaser
+        ? 'Phaser 3 + Vite'
+        : deps.vue
+          ? 'Vite + Vue'
+          : deps.svelte
+            ? 'Vite + Svelte'
+            : deps.solid || deps['vite-plugin-solid']
+              ? 'Vite + Solid'
+              : deps.preact
+                ? 'Vite + Preact'
+                : 'Vite + React';
+    defaultPort = 5173;
+  } else if (deps['node-telegram-bot-api'] || deps.telegraf || deps.grammy || deps['discord.js']) {
     type = 'node-telegram-bot';
-    framework = 'Telegram bot';
+    framework = deps['discord.js'] ? 'Discord bot' : 'Telegram bot';
     runnable = Boolean(devCommand);
-  } else if (pkg && !devCommand && scripts.start) {
+  } else if (pkg && (deps.express || deps.fastify || deps.koa || deps['@hapi/hapi'] || deps.hono || deps['@nestjs/core'])) {
+    type = 'express-node';
+    framework = deps['@nestjs/core']
+      ? 'NestJS'
+      : deps.fastify
+        ? 'Fastify'
+        : deps.hono
+          ? 'Hono'
+          : deps.koa
+            ? 'Koa'
+            : deps['@hapi/hapi']
+              ? 'hapi'
+              : 'Express';
+    defaultPort = 3000;
+  } else if (pkg && pkg.bin && !scripts.dev) {
+    // A package that ships a `bin` and has no `dev` script is a command-line
+    // tool. It may still be worth running (plenty of CLIs open a local
+    // dashboard), so it keeps its Start button — but as a PORTLESS project:
+    // such a tool binds its own fixed port, if any, and reserving one from the
+    // range for it only ever produced a card pointing at a dead port.
     type = 'node-cli';
     framework = 'Node CLI';
-    runnable = false;
-  } else if (pkg && (deps.express || deps.fastify || deps.koa || deps['@hapi/hapi'])) {
-    type = 'express-node';
-    framework = deps.fastify ? 'Fastify' : deps.koa ? 'Koa' : deps['@hapi/hapi'] ? 'hapi' : 'Express';
-    defaultPort = 3000;
+    runnable = Boolean(devCommand);
   } else if (pkg && (scripts.dev || '').includes('serve')) {
     type = 'vanilla-es-modules';
     framework = 'Vanilla ES modules';
     const m = (scripts.dev || '').match(/-l\s+(\d+)/);
     defaultPort = m ? Number(m[1]) : 5173;
-  } else if (!pkg && (looksLikeFastapi(dir) || has(dir, 'pyproject.toml') || has(dir, 'requirements.txt'))) {
-    // Python project with no package.json.
-    const fastapi = looksLikeFastapi(dir);
-    type = fastapi ? 'fastapi-python' : 'python';
-    framework = fastapi ? 'FastAPI (Python)' : 'Python';
-    runnable = fastapi;
-    defaultPort = fastapi ? 8000 : null;
   } else if (!pkg && has(dir, 'index.html')) {
     type = 'html5-static';
     framework = 'Static HTML/CSS/JS';
@@ -199,7 +362,7 @@ function classifyLeaf(dir) {
     framework = 'Node';
   }
 
-  return { type, framework, devCommand, defaultPort, runnable };
+  return { type, framework, devCommand, defaultPort, runnable, packageManager: pm };
 }
 
 /** Resolve npm `workspaces` (array or {packages}) into a flat list of globs. */
@@ -249,9 +412,11 @@ function detectSubprojects(dir, id) {
       name,
       path: path.resolve(childDir),
       type: det.type,
+      typeGroup: typeGroupForType(det.type),
       framework: det.framework,
       defaultPort: det.defaultPort,
       discoveredCommand: det.devCommand,
+      packageManager: det.packageManager,
     });
   }
   return subs;
@@ -266,16 +431,18 @@ function detectSubprojects(dir, id) {
 function detectProject(dir, id) {
   const pkg = readPkg(dir);
   const scripts = pkg?.scripts || {};
-  const isMonorepo = Boolean(workspaceGlobs(pkg).length);
+  const isMonorepo = Boolean(workspaceGlobs(pkg).length) || has(dir, 'pnpm-workspace.yaml');
+  const pm = detectPackageManager(dir, pkg);
 
   let leaf;
   if (isMonorepo) {
     leaf = {
       type: 'monorepo',
-      framework: 'npm-workspaces monorepo',
-      devCommand: scripts.dev ? 'npm run dev' : scripts.start ? 'npm start' : null,
+      framework: pm === 'npm' ? 'npm-workspaces monorepo' : `${pm} workspaces monorepo`,
+      devCommand: scripts.dev ? runScript(pm, 'dev') : scripts.start ? runScript(pm, 'start') : null,
       defaultPort: null,
       runnable: Boolean(scripts.dev),
+      packageManager: pm,
     };
   } else {
     leaf = classifyLeaf(dir);
@@ -291,6 +458,7 @@ function detectProject(dir, id) {
     devCommand: leaf.devCommand,
     defaultPort: leaf.defaultPort,
     runnable: leaf.runnable,
+    packageManager: leaf.packageManager || 'npm',
     subprojects,
     repoUrl: readRepoUrl(dir),
   };
@@ -310,6 +478,14 @@ const PROJECT_MARKERS = [
   'pyproject.toml',
   'requirements.txt',
   'setup.py',
+  'Pipfile',
+  'manage.py',
+  'deno.json',
+  'deno.jsonc',
+  'docker-compose.yml',
+  'docker-compose.yaml',
+  'compose.yml',
+  'compose.yaml',
   'go.mod',
   'Cargo.toml',
   'pom.xml',
@@ -348,9 +524,15 @@ function isProjectDir(dir) {
 /**
  * Scan the projects root and return base discovered projects (pre-override).
  * @param {string} projectsRoot
+ * @param {object} [opts]
+ * @param {string} [opts.selfPath]  folder to exclude as "this dashboard itself"
+ *                                  (defaults to the repo root). Passing null
+ *                                  disables self-exclusion (used by tests).
  * @returns {Array<object>}
  */
-export function scanFilesystem(projectsRoot) {
+export function scanFilesystem(projectsRoot, opts = {}) {
+  const selfPath =
+    opts.selfPath === undefined ? REPO_ROOT : opts.selfPath ? path.resolve(opts.selfPath) : null;
   const out = [];
   let entries = [];
   try {
@@ -364,6 +546,9 @@ export function scanFilesystem(projectsRoot) {
     if (SKIP_DIRS.has(ent.name)) continue;
     if (ent.name.endsWith('.git')) continue; // bare repo backups
     const dir = path.join(projectsRoot, ent.name);
+    // Never list the dashboard itself. Compared by resolved path, so it holds
+    // whatever the clone folder is named (`launchpad`, `mission-control`, …).
+    if (selfPath && path.resolve(dir) === selfPath) continue;
     if (!isProjectDir(dir)) continue; // skip worktrees / stray non-project folders
     const id = folderToId(ent.name);
     const det = detectProject(dir, id);
@@ -379,6 +564,7 @@ export function scanFilesystem(projectsRoot) {
       runnable: det.runnable,
       discoveredCommand: det.devCommand,
       defaultPort: det.defaultPort,
+      packageManager: det.packageManager,
       subprojects: det.subprojects,
     });
   }

@@ -28,10 +28,22 @@ export function defaultProjectsRoot() {
   return path.resolve(REPO_ROOT, '..');
 }
 
+/**
+ * Port the dashboard itself listens on. `MISSION_CONTROL_PORT` overrides
+ * config.json, mirroring `MISSION_CONTROL_PROJECTS_ROOT`: :7777 is a popular
+ * port (a local FastAPI or LLM server may already own it) and, until now, the
+ * only way around a clash was hand-editing a git-ignored config file.
+ * @returns {number}
+ */
+export function defaultDashboardPort() {
+  const env = Number(process.env.MISSION_CONTROL_PORT);
+  return Number.isInteger(env) && env > 0 && env < 65536 ? env : 7777;
+}
+
 /** Default global settings (SPEC §4). */
 export const DEFAULT_SETTINGS = {
   projectsRoot: defaultProjectsRoot(),
-  dashboardPort: 7777,
+  dashboardPort: defaultDashboardPort(),
   portRange: { start: 4000, end: 4099 },
   ringBytes: 262144,
   metricsTtlSec: 60,

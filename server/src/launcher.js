@@ -20,6 +20,15 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+/** Install invocation per supported package manager. */
+const INSTALLERS = {
+  npm: ['install'],
+  pnpm: ['install'],
+  yarn: ['install'],
+  bun: ['install'],
+  uv: ['sync'],
+};
+
 /** Substitute ${PORT} in env values. */
 function resolveEnv(env, port) {
   const out = {};
@@ -375,10 +384,12 @@ export class Launcher {
     }
     const inst = installStateFor(project);
     const cwd = project.cwd || project.path;
-    // Pick installer: explicit per install-state, default npm for Node.
-    const installer = inst.installer || 'npm';
-    const cmd = installer === 'uv' ? 'uv' : 'npm';
-    const args = installer === 'uv' ? ['sync'] : ['install'];
+    // Pick the installer the project actually uses: `uv sync` for Python,
+    // otherwise the detected Node package manager (npm / pnpm / yarn / bun).
+    // Installing with the wrong manager can rewrite a foreign lockfile.
+    const installer = inst.installer || project.packageManager || 'npm';
+    const cmd = INSTALLERS[installer] ? installer : 'npm';
+    const args = INSTALLERS[cmd];
 
     const ring = this.catalog.ensureRing(id);
     const banner = `\n[mission-control] installing dependencies: ${cmd} ${args.join(' ')} (cwd: ${cwd})\n`;

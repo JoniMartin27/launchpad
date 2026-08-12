@@ -267,6 +267,7 @@ export class Catalog {
       typeGroup: b.typeGroup,
       framework: b.framework,
       repoUrl: b.repoUrl ?? null,
+      packageManager: b.packageManager ?? null,
 
       runnable: b.runnable,
       command: rt?.command || b.command,
