@@ -16,6 +16,28 @@ equivalent to running `npm run dev` in that folder yourself. Mission Control
 gives you no protection against a project you would not otherwise trust — point
 it at a projects folder you own.
 
+### Where a shell is used, and where it deliberately is not
+
+**Launching a project uses a shell** (`spawn(..., { shell: true })`). That is
+intentional: a dev command comes from the project's own `package.json` or from
+your config, and those legitimately contain things only a shell understands —
+`&&`, pipes, `cross-env FOO=1 vite`. Running them without a shell would break
+most real projects. The trust boundary is the same as the one above: if you can
+launch the project, you could have typed its command yourself.
+
+**Everything else does not.** Opening a project in your editor, file manager or
+terminal passes the path as its own argument with `shell: false`. This used to
+use a shell too, and because `shell: true` concatenates arguments *without
+escaping them* (Node warns about it — DEP0190), a project folder named
+`demo & whoami` ran `whoami` when opened. Folder names are attacker-influenceable
+in a way dev commands are not: cloning a repository is enough to choose one, and
+discovery lists whatever is in your projects folder. Fixed in
+[#24](https://github.com/JoniMartin27/launchpad/pull/24).
+
+The rule this leaves behind, for anyone adding a feature that runs something:
+**a shell is acceptable only for a command the user configured, never for a
+value derived from the filesystem.**
+
 Because it is loopback-only, **anything already running as your user on your
 machine can reach the API**. That is inherent to the design, not a defect.
 
