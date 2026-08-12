@@ -14,6 +14,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // server/src/config.js → package root is two levels up.
 export const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
+// Hard ceiling on how deep a scan may go below projectsRoot. Depth 3 covers
+// every real workspace layout seen so far (`code/work/client/app`); beyond that
+// the cost of walking a big tree synchronously outweighs any plausible benefit.
+export const MAX_SCAN_DEPTH = 3;
+
 /**
  * Are we running from an installed package (`npx @fervon/launchpad`, a global
  * or local dependency) rather than from a git checkout?
@@ -84,6 +89,11 @@ export const DEFAULT_SETTINGS = {
   ringBytes: 262144,
   metricsTtlSec: 60,
   autoScan: true,
+  // How many folder levels below projectsRoot to look for projects. 1 = the
+  // classic flat workspace. Raise it for a `code/work/*` + `code/personal/*`
+  // layout — or just let discovery notice the empty result and widen the search
+  // on its own, which it will tell you about.
+  scanDepth: 1,
   readyRegex: 'ready in|listening on|Local:\\s+http|started server|compiled|running at',
 };
 
@@ -130,6 +140,11 @@ export function validateConfig(config) {
       errors.push('settings.portRange.{start,end} must be numbers');
     } else if (s.portRange.start > s.portRange.end) {
       errors.push('settings.portRange.start must be <= end');
+    }
+    if (s.scanDepth !== undefined) {
+      if (!Number.isInteger(s.scanDepth) || s.scanDepth < 1 || s.scanDepth > MAX_SCAN_DEPTH) {
+        errors.push(`settings.scanDepth must be an integer between 1 and ${MAX_SCAN_DEPTH}`);
+      }
     }
     if (s.ringBytes !== undefined && typeof s.ringBytes !== 'number') errors.push('settings.ringBytes must be a number');
     if (s.metricsTtlSec !== undefined && typeof s.metricsTtlSec !== 'number') errors.push('settings.metricsTtlSec must be a number');

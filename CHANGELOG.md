@@ -4,6 +4,28 @@ All notable changes to Mission Control are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims
 at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Projects in subfolders are found.** `settings.scanDepth` (1–3) controls how
+  many levels below the root to look. A scan that finds nothing widens the
+  search on its own, explains that in a banner, and remembers the depth that
+  worked. Nested projects are named after their trail (`work/api`) so two
+  folders called `api` never collide; a project folder is never descended into,
+  so a monorepo stays one card.
+- **Discovery warnings are visible.** They were collected by the catalog and
+  then read by nobody — no route, no WebSocket message, no UI. They now travel
+  with `GET /api/projects`, `/api/refresh`, `/api/rescan` and the `catalog` WS
+  broadcast, and render in a banner above the grid.
+
+### Changed
+
+- React 19, Vite 8, TypeScript 7, `@fastify/static` 10, fastify 5.11, ws 8.21,
+  concurrently 10. `npm audit`: **2 high-severity advisories → 0** (find-my-way
+  HTTP/2 DoS and three fast-uri host-confusion issues, both pulled in by
+  fastify).
+
 ## [1.1.0] — 2026-08-12
 
 ### Added

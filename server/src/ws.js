@@ -129,6 +129,9 @@ export class WsHub {
       removed: diff?.removed || [],
       changed: diff?.changed || [],
       projects: projects || [],
+      // Carry the current discovery warnings so a rescan that starts (or stops)
+      // producing one updates the banner without a reload.
+      warnings: this.catalog?.warnings || [],
     });
     this._broadcastAll(payload);
   }

@@ -27,6 +27,7 @@ export default function App() {
   const store = useProjects();
   const {
     projects,
+    warnings,
     loading,
     error,
     connected,
@@ -309,6 +310,21 @@ export default function App() {
       <ActivityPulseLine tick={pulseTick} />
 
       <main className="app-body">
+        {warnings.length > 0 && (
+          <div className="warn-banner" role="status">
+            <span className="warn-icon" aria-hidden>
+              ⚠
+            </span>
+            <ul className="warn-list">
+              {warnings.map((w, i) => (
+                // Indexed key: the list is replaced wholesale on every scan, and
+                // two warnings can legitimately read the same.
+                <li key={`${i}-${w}`}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="content">
           {projects.length > 0 && (
             <FilterRail

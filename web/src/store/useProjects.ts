@@ -34,6 +34,9 @@ export function useProjects() {
   const [logs, setLogs] = useState<Record<string, string[]>>({});
   const [installLogs, setInstallLogs] = useState<Record<string, string[]>>({});
   const [toasts, setToasts] = useState<Toast[]>([]);
+  // Discovery warnings from the server (widened search, port clash, a config
+  // entry missing from disk). These used to live only in the server console.
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   // Ids of cards that just animated in via rescan — gets a brief accent ring.
   const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
@@ -66,6 +69,7 @@ export function useProjects() {
     try {
       const res = await getProjects();
       setProjects(res.projects);
+      setWarnings(res.warnings ?? []);
     } catch (e) {
       setError((e as Error).message || 'Failed to load projects');
     } finally {
@@ -78,6 +82,7 @@ export function useProjects() {
     try {
       const res = await apiRefresh();
       setProjects(res.projects);
+      if (res.warnings) setWarnings(res.warnings);
       pulse();
     } catch (e) {
       setError((e as Error).message || 'Refresh failed');
@@ -238,6 +243,9 @@ export function useProjects() {
           // diffs plus a full `projects` snapshot. Reconcile off the snapshot so
           // an open dashboard reflects folders that appear/disappear on disk.
           if (msg.projects) applySnapshot(msg.projects, { toast: true });
+          // A rescan can start or stop producing warnings; keep the banner in
+          // step without waiting for a reload.
+          if (msg.warnings) setWarnings(msg.warnings);
           break;
         }
 
@@ -323,6 +331,7 @@ export function useProjects() {
 
   return {
     projects,
+    warnings,
     loading,
     error,
     connected,

@@ -33,6 +33,27 @@ a:hover { color: var(--accent-bright); }
 .app-body { flex: 1; padding: var(--sp-5) var(--page-gutter) var(--sp-8); }
 .content { max-width: var(--page-max); margin: 0 auto; }
 
+/* ============================================== discovery warning banner === */
+/* Discovery used to collect warnings that nothing ever displayed — a widened
+   scan, a port clash, a config entry pointing at a folder that no longer
+   exists. They belong on screen, above the grid, in the amber "attention, not
+   failure" register: this is information, not an error state. */
+.warn-banner {
+  max-width: var(--page-max);
+  margin: 0 auto var(--sp-4);
+  display: flex; gap: var(--sp-3); align-items: flex-start;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid color-mix(in srgb, var(--status-warn) 38%, transparent);
+  border-left-width: 3px;
+  border-radius: var(--radius-md, 10px);
+  background: color-mix(in srgb, var(--status-warn) 10%, var(--slate-1));
+  color: var(--slate-8);
+  font-size: var(--fs-sm, 0.875rem);
+  line-height: 1.5;
+}
+.warn-icon { color: var(--status-warn); font-size: 1rem; line-height: 1.4; flex: none; }
+.warn-list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-1); }
+
 /* ================================================================ top bar === */
 .topbar {
   position: sticky; top: 0; z-index: var(--z-topbar);

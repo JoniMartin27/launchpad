@@ -87,6 +87,8 @@ export interface Project {
 
 export interface ProjectsResponse {
   projects: Project[];
+  /** Discovery warnings (widened search, port clash, config entry off disk). */
+  warnings?: string[];
   generatedAt: string;
 }
 
@@ -223,6 +225,7 @@ export interface WsCatalog {
   removed?: string[];
   changed?: string[];
   projects?: Project[];
+  warnings?: string[];
 }
 
 /** Live install/setup output (DESIGN §2). Streamed during POST .../install. */
