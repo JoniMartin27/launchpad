@@ -16,6 +16,8 @@ import { isPortFreeStrict, isPortFree, isPortInUse, allocatePort } from './ports
 import { makeAnsiStripper } from './ansi.js';
 import { classifyFailure, installState as installStateFor } from './diagnose.js';
 
+const IS_WINDOWS = process.platform === 'win32';
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -155,6 +157,13 @@ export class Launcher {
         env,
         shell: true, // SPEC §7: shell:true (cmd/args are config-defined, not user strings)
         windowsHide: true,
+        // POSIX: make the child its OWN process-group leader. With shell:true
+        // the direct child is `/bin/sh`, and the dev server is its grandchild —
+        // killing just the pid leaves that grandchild alive holding the port.
+        // `detached` gives us a group id (= the pid) to signal as `-pid`, which
+        // is what killTree does. On Windows `detached` would spawn a new console
+        // window, so it stays off there (taskkill /T already walks the tree).
+        detached: !IS_WINDOWS,
       });
     } catch (err) {
       this.catalog.setStatus(id, { status: 'error', reason: String(err.message || err) });
@@ -456,29 +465,70 @@ export class Launcher {
 }
 
 /**
- * Kill a full process tree on Windows: `taskkill /PID <pid> /T /F`.
- * Never throws; a missing pid (already gone) is fine.
+ * Is a process (or process group, for a negative pid) still alive?
+ * Signal 0 performs the permission/existence check without delivering anything.
+ * @param {number} target  pid, or -pid for a group
+ * @returns {boolean}
+ */
+function isAlive(target) {
+  try {
+    process.kill(target, 0);
+    return true;
+  } catch (err) {
+    // EPERM = it exists but belongs to someone else — still alive.
+    return err?.code === 'EPERM';
+  }
+}
+
+/**
+ * Kill a full process tree, cross-platform. Never throws; a pid that is already
+ * gone is fine.
+ *
+ * - **Windows**: `taskkill /PID <pid> /T /F` walks the tree for us.
+ * - **POSIX**: children are spawned `detached`, so the child pid IS a process
+ *   group id. Signalling `-pid` reaches the shell AND the dev server it spawned.
+ *   We ask politely first (SIGTERM, so frameworks can flush and release the
+ *   port) and escalate to SIGKILL only if the group is still alive after the
+ *   grace window.
+ *
  * @param {number} pid
+ * @param {object} [opts]
+ * @param {number} [opts.graceMs=2000]  time to wait for SIGTERM to land
  * @returns {Promise<void>}
  */
-export function killTree(pid) {
+export function killTree(pid, { graceMs = 2000 } = {}) {
   return new Promise((resolve) => {
     if (!pid) return resolve();
-    if (process.platform === 'win32') {
+    if (IS_WINDOWS) {
       execFile('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true }, () => resolve());
-    } else {
-      // POSIX fallback (dev on non-Windows): kill the process group.
-      try {
-        process.kill(-pid, 'SIGKILL');
-      } catch {
+      return;
+    }
+
+    // POSIX. Target the process GROUP (-pid) so grandchildren die too; fall
+    // back to the bare pid if the child was never detached (no group of its own).
+    const targets = isAlive(-pid) ? [-pid] : [pid];
+    const signal = (sig) => {
+      for (const t of targets) {
         try {
-          process.kill(pid, 'SIGKILL');
+          process.kill(t, sig);
         } catch {
           /* already gone */
         }
       }
-      resolve();
-    }
+    };
+
+    signal('SIGTERM');
+
+    const deadline = Date.now() + graceMs;
+    const poll = () => {
+      if (!targets.some((t) => isAlive(t))) return resolve();
+      if (Date.now() >= deadline) {
+        signal('SIGKILL');
+        return resolve();
+      }
+      setTimeout(poll, 100);
+    };
+    setTimeout(poll, 50);
   });
 }
 
