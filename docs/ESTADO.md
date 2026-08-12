@@ -779,3 +779,59 @@ Ahora es `settings.portlessGraceMs`.
    drawer, y los subproyectos no lo ofrecen en absoluto.
 9. **`installState` asume npm/uv**: Go o Rust sin dependencias no ofrecen nada.
 10. **Sin telemetría de adopción** más allá de las descargas de npm.
+
+---
+
+## Iteración 13 — 2026-08-13
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `0c5cacd` · 157 tests de servidor + 14 de frontend |
+| npm | **1.1.0** — 1.2.0 y 1.3.0 etiquetadas sin publicar |
+| CI / PRs / issues | 8 checks verdes · 0 · 0 · 1 estrella · audit 0 |
+
+### Qué se cambió — [PR #28](https://github.com/JoniMartin27/launchpad/pull/28) (mejora #2, la parte de interfaz)
+
+El autoreinicio de la iteración anterior funcionaba pero **solo se podía activar
+editando un JSON a mano**, así que en la práctica no existía. Y es una opción
+que cambia lo que un proyecto hace *sin ti*: no tiene por qué estar escondida.
+
+Ahora hay un interruptor en el panel de detalle (con la letra pequeña al lado) y
+una marca en la tarjeta cuando está armado. Solo se ofrece en proyectos
+lanzables — una casilla que no hace nada sería peor que ninguna. Tras el cambio
+se recarga el proyecto **con la respuesta del servidor**, que es quien acaba de
+validar, guardar y re-descubrir.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **157 de servidor + 18 de frontend** (eran 14) |
+| Mutantes | 3 muertos (marcar todas las tarjetas, que apagar mande `true`, ofrecerlo en no lanzables) |
+| CI | 8 checks verdes · Veredicto limpio |
+| En vivo | marca solo en el proyecto armado · **interruptor pulsado en el navegador** → se desmarca, desaparece la marca y el fichero pasa a `autoRestart:false` · start → 200 → stop → puerto libre |
+
+**Nota de proceso:** tras el merge la suite dio 2 fallos en `main`. No era una
+regresión: eran **mis propios procesos de simulación** vivos (la trampa (h) que
+yo mismo documenté). Matados, 157 + 18 en verde. Conviene comprobar los procesos
+sueltos *antes* de creerse un rojo.
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **npm sigue en 1.1.0 con dos versiones etiquetadas sin publicar.** Trece
+   iteraciones viven solo en GitHub.
+2. **Captura y GIF del README** son de junio: sin banda de avisos, sin botones
+   de lote, sin los de abrir, sin la marca de autoreinicio.
+3. **Los perfiles no se pueden crear desde la UI**, ni hay selector en la barra.
+4. **El escaneo sigue siendo síncrono**; `fs.promises` con concurrencia acotada.
+5. **`restart` sigue bloqueando** hasta 8 s esperando que el puerto se libere.
+6. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto.
+7. **La tarjeta no ofrece abrir en editor/terminal/carpeta**: hay que abrir el
+   drawer, y los subproyectos no lo ofrecen en absoluto.
+8. **`installState` asume npm/uv**: Go o Rust sin dependencias no ofrecen nada.
+9. **Los avisos de autoreinicio no se ven en la UI**: viajan como `warning` por
+   WebSocket pero la banda solo pinta avisos de descubrimiento, así que
+   «reintentando en 2 s» y «me rindo» se pierden.
+10. **Sin telemetría de adopción** más allá de las descargas de npm.
