@@ -15,6 +15,12 @@ import { ruleForType, buildSpawnArgs, portStrategyNote } from './frameworks.js';
 import { isPortFreeStrict, isPortFree, isPortInUse, allocatePort } from './ports.js';
 import { makeAnsiStripper } from './ansi.js';
 import { classifyFailure, installState as installStateFor } from './diagnose.js';
+import {
+  decideRestart,
+  shouldForgiveAttempts,
+  DEFAULT_MAX_ATTEMPTS,
+  DEFAULT_BASE_DELAY_MS,
+} from './autorestart.js';
 
 const IS_WINDOWS = process.platform === 'win32';
 
@@ -194,6 +200,12 @@ export class Launcher {
       command: [cmd, ...args].join(' '),
       portless,
       requirePortBind,
+      // `setRuntime` replaces the whole record, so the crash counter has to be
+      // carried across explicitly — otherwise every auto-restart would start
+      // from zero attempts and a project that crashes on boot would be
+      // relaunched forever. A start YOU asked for does reset it: you
+      // intervened, so the budget is fresh.
+      restartAttempts: overrides.carryAttempts ? existing?.restartAttempts || 0 : 0,
     });
     this._broadcastStatus(id, 'starting');
 
@@ -248,11 +260,14 @@ export class Launcher {
   /** Poll the port and/or run a grace timer to flip starting → running. */
   _scheduleReadiness(id, port, portless, requirePortBind = false) {
     if (portless) {
-      // Portless CLIs: 2.5s grace timer if still alive.
+      // Portless CLIs and bots bind nothing, so "still alive after a moment" is
+      // the only readiness signal available. Configurable because a test needs
+      // to reach `running` quickly to exercise what happens AFTER it — and
+      // because 2.5s is a guess, not a law.
       setTimeout(() => {
         const rt = this.catalog.getRuntime(id);
         if (rt && rt.status === 'starting') this._markRunning(id);
-      }, 2500);
+      }, this.settings.portlessGraceMs ?? 2500);
       return;
     }
     let elapsed = 0;
@@ -323,9 +338,72 @@ export class Launcher {
       return;
     }
 
+    const wasRunning = rt?.status === 'running';
+    const startedAtMs = rt?.startedAt ? Date.parse(rt.startedAt) : null;
+    const attempts = rt?.restartAttempts || 0;
+
     this.catalog.setStatus(id, { status: 'stopped', exitCode, reason: wasStopping ? 'stopped' : signal ? `signal ${signal}` : null, failureClass: null });
     this.catalog.clearChild(id);
     this._broadcastStatus(id, 'stopped', { exitCode });
+
+    if (wasRunning && !wasStopping) this._maybeAutoRestart(id, { exitCode, attempts, startedAtMs });
+  }
+
+  /**
+   * A project died on its own. Decide whether to bring it back, and say so
+   * either way — a dashboard that silently relaunches things is as unnerving as
+   * one that silently gives up.
+   *
+   * @param {string} id
+   * @param {object} ctx  { exitCode, attempts, startedAtMs }
+   */
+  _maybeAutoRestart(id, { exitCode, attempts, startedAtMs }) {
+    const project = this.catalog.getLaunchable(id);
+    if (!project) return;
+
+    // A project that had been up for a while gets its budget back: two crashes
+    // a day apart are not a crash loop.
+    const forgiven = shouldForgiveAttempts(startedAtMs, Date.now(), this.settings.autoRestartHealthyMs);
+    const used = forgiven ? 0 : attempts;
+
+    const decision = decideRestart({
+      enabled: project.autoRestart === true,
+      exitCode,
+      previousStatus: 'running',
+      attempts: used,
+      maxAttempts: this.settings.autoRestartMax ?? DEFAULT_MAX_ATTEMPTS,
+      baseDelayMs: this.settings.autoRestartDelayMs ?? DEFAULT_BASE_DELAY_MS,
+    });
+
+    if (!decision.restart) {
+      // Only worth saying out loud when the user asked for auto-restart and did
+      // not get it; otherwise it is just noise about a feature they never
+      // switched on.
+      if (project.autoRestart === true && used >= (this.settings.autoRestartMax ?? DEFAULT_MAX_ATTEMPTS)) {
+        this.ws.broadcastWarning(id, 'AUTO_RESTART_GAVE_UP', `Not restarting ${id} again: ${decision.reason}.`);
+      }
+      this.catalog.setStatus(id, { restartAttempts: 0 });
+      return;
+    }
+
+    const next = used + 1;
+    this.catalog.setStatus(id, { restartAttempts: next });
+    this.ws.broadcastWarning(
+      id,
+      'AUTO_RESTARTING',
+      `${id} ${decision.reason}; restarting in ${Math.round(decision.delayMs / 1000)}s (attempt ${next}).`
+    );
+
+    const timer = setTimeout(() => {
+      const rt = this.catalog.getRuntime(id);
+      // Someone may have started or removed it while we waited.
+      if (rt && (rt.status === 'running' || rt.status === 'starting')) return;
+      const fresh = this.catalog.getLaunchable(id);
+      if (!fresh) return;
+      this.start(fresh, { carryAttempts: true }).catch(() => {});
+    }, decision.delayMs);
+    // Never hold the process open just to retry something.
+    timer.unref?.();
   }
 
   /**

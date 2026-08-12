@@ -8,6 +8,22 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Auto-restart after a crash**, opt-in per project (`autoRestart: true`). A dev
+  server that dies on its own used to leave a red card and nothing else — you
+  noticed minutes later, when the thing you were testing stopped answering.
+  The policy is deliberately timid, because restarting badly is worse than not
+  restarting at all:
+  - only after a **non-zero** exit (a clean exit means "it finished");
+  - never after **you** stopped it, and never for a start that never came up —
+    that is a needs-install / needs-env problem, and relaunching would bury the
+    diagnosis;
+  - a **bounded** number of attempts (`settings.autoRestartMax`, default 3) with
+    a growing wait, and it says so on the way in *and* on the way out;
+  - the budget resets once the project has stayed up for a minute, so a server
+    that hiccups twice a day is never eventually refused.
+- `settings.portlessGraceMs`: how long a portless project (bot, CLI) must stay
+  alive before it counts as running. Was a hardcoded 2.5s.
+
 - **A dashboard that died badly no longer strands your dev servers.** An orderly
   shutdown kills its children, but a hard kill — Task Manager, `kill -9`, a
   crash — leaves them running. The next boot showed them as *stopped*, refused

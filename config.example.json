@@ -12,7 +12,8 @@
     "autoScan": true,
     "scanDepth": 1,
     "readyRegex": "ready in|listening on|Local:\\s+http|started server|compiled|running at",
-    "editorCommand": "code"
+    "editorCommand": "code",
+    "autoRestartMax": 3
   },
   "projects": {
     "my-app": {
@@ -28,7 +29,8 @@
       "registry": {
         "kind": "npm",
         "name": "my-app"
-      }
+      },
+      "autoRestart": false
     }
   },
   "profiles": {
