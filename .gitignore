@@ -21,3 +21,6 @@ LAUNCH-POSTS.md
 
 # Machine-local config written when running from an npm install
 .launchpad.json
+
+# Runtime state used to re-adopt processes after a hard restart
+.launchpad-state.json

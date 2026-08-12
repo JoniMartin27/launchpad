@@ -4,6 +4,25 @@ All notable changes to Mission Control are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims
 at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **A dashboard that died badly no longer strands your dev servers.** An orderly
+  shutdown kills its children, but a hard kill — Task Manager, `kill -9`, a
+  crash — leaves them running. The next boot showed them as *stopped*, refused
+  to start them (`PORT_IN_USE: in use by a foreign process`) and offered no way
+  to stop what it did not know it owned: you went hunting for the pid by hand,
+  which is the chore this tool exists to abolish. Launches are now recorded in a
+  small state file, and anything still alive **and still holding its port** is
+  adopted back on boot, stoppable from the card as usual.
+  - A live pid is *not* enough to adopt: pids get recycled, so the port is what
+    proves the process is still ours. Portless projects (bots, CLIs) are
+    deliberately never adopted — claiming a recycled pid would be worse than
+    forgetting it.
+  - Adopted cards say so: their output went to a process tree we no longer own,
+    so the log panel explains that instead of looking empty.
+
 ## [1.3.0] — 2026-08-12
 
 ### Added

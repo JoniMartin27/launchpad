@@ -44,6 +44,12 @@ export interface Project {
   repoUrl: string | null;
   /** Detected package manager (Node projects); null for other ecosystems. */
   packageManager: PackageManager | null;
+  /**
+   * Recovered from a previous run of the dashboard after a hard restart. It can
+   * be stopped, but its output went to a process tree we no longer own, so
+   * there are no logs to show for it.
+   */
+  adopted?: boolean;
 
   runnable: boolean;
   command: string;
