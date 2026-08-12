@@ -29,6 +29,8 @@ interface Props {
   onOpenApp: (project: Project) => void;
   /** Hand the project path to the editor, the file manager or a terminal. */
   onOpenIn: (id: string, target: OpenTarget) => void;
+  /** Arm or disarm crash recovery for this project. */
+  onToggleAutoRestart: (id: string, on: boolean) => void;
 }
 
 /**
@@ -211,6 +213,30 @@ export function DetailDrawer(props: Props) {
                 <p className="env-path">
                   <code>{p.path}\.env</code>
                 </p>
+              </div>
+            </section>
+          )}
+
+          {/* Crash recovery. Opt-in, and until now only reachable by editing a
+              JSON file by hand — which meant almost nobody would ever find it. */}
+          {p.runnable && (
+            <section className="panel autorestart-panel">
+              <div className="panel-head">If it crashes</div>
+              <div className="panel-body">
+                <label className="switch-row">
+                  <input
+                    type="checkbox"
+                    checked={p.autoRestart === true}
+                    onChange={(e) => props.onToggleAutoRestart(p.id, e.target.checked)}
+                  />
+                  <span className="switch-label">
+                    Bring it back automatically
+                    <span className="switch-hint">
+                      Only after a crash — never after you stop it, and it gives up rather than
+                      looping if the project keeps dying.
+                    </span>
+                  </span>
+                </label>
               </div>
             </section>
           )}

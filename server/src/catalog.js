@@ -327,6 +327,10 @@ export class Catalog {
       framework: b.framework,
       repoUrl: b.repoUrl ?? null,
       packageManager: b.packageManager ?? null,
+      // Opt-in crash recovery. Exposed so the card can say it is armed and the
+      // drawer can toggle it — a setting only reachable by hand-editing JSON is
+      // barely a setting.
+      autoRestart: b.autoRestart === true,
 
       runnable: b.runnable,
       command: rt?.command || b.command,

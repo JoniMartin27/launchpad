@@ -766,3 +766,23 @@ a:hover { color: var(--accent-bright); }
 .batch-btn:hover:not(:disabled) { background: var(--slate-3); border-color: var(--accent-muted); color: var(--slate-9); }
 .batch-btn:disabled { opacity: 0.5; cursor: default; }
 .batch-btn.danger:hover:not(:disabled) { border-color: var(--status-err, #e0480f); color: var(--status-err, #e0480f); }
+
+/* ===================================== auto-restart: switch + card mark === */
+/* Crash recovery changes what a project does WITHOUT you, so the grid has to
+   show it at a glance, and the drawer has to let you change it without editing
+   a JSON file by hand. */
+.autorestart-panel .panel-body { padding: var(--sp-3) var(--sp-4); }
+.switch-row {
+  display: flex; gap: var(--sp-3); align-items: flex-start; cursor: pointer;
+}
+.switch-row input { margin-top: 3px; accent-color: var(--accent); cursor: pointer; }
+.switch-label {
+  display: grid; gap: 2px;
+  font-size: var(--fs-sm, 0.875rem); color: var(--slate-8);
+}
+.switch-hint { font-size: var(--fs-xs, 0.8125rem); color: var(--slate-6); line-height: 1.45; }
+.auto-restart-mark {
+  margin-left: var(--sp-1);
+  font-size: 0.8125rem; line-height: 1;
+  color: var(--accent-bright); opacity: 0.85;
+}

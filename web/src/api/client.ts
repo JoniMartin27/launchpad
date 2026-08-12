@@ -186,6 +186,22 @@ export function installProject(id: string): Promise<InstallResponse> {
   });
 }
 
+/**
+ * Change one project's overrides (port, command, autoRestart…). The server
+ * validates, persists and re-runs discovery, then answers with the updated
+ * project — plus `requiresRestart` when the change only takes effect on the
+ * next launch.
+ */
+export function updateProjectConfig(
+  id: string,
+  partial: Record<string, unknown>
+): Promise<Project & { requiresRestart?: boolean }> {
+  return request(`/api/projects/${encodeURIComponent(id)}/config`, {
+    method: 'PATCH',
+    body: JSON.stringify(partial)
+  });
+}
+
 /** Hand a project's path to the editor, the file manager, or a terminal. */
 export function openIn(id: string, target: OpenTarget): Promise<{ ok: boolean; target: OpenTarget }> {
   return request('/api/open', { method: 'POST', body: JSON.stringify({ id, target }) });

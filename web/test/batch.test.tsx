@@ -131,3 +131,56 @@ describe('open in editor / folder / terminal', () => {
     await waitFor(() => expect(document.body.textContent).toMatch(/is it installed/));
   });
 });
+
+describe('crash recovery from the UI', () => {
+  test('the card marks a project that will restart itself', async () => {
+    apiState.projects = [
+      makeProject({ id: 'armed', name: 'armed', autoRestart: true }),
+      makeProject({ id: 'plain', name: 'plain' }),
+    ];
+    render(<App />);
+    await screen.findByText('armed');
+    // Exactly one mark: what is armed must be visible, and what is not must not
+    // pretend to be.
+    const marks = document.querySelectorAll('.auto-restart-mark');
+    expect(marks.length).toBe(1);
+    expect(marks[0].closest('.card')?.textContent).toContain('armed');
+  });
+
+  test('the drawer toggle patches the project config', async () => {
+    apiState.projects = [makeProject({ id: 'demo', name: 'demo', autoRestart: false })];
+    render(<App />);
+    (await screen.findByText('demo')).click();
+
+    const box = (await screen.findByText(/Bring it back automatically/))
+      .closest('label')!
+      .querySelector('input') as HTMLInputElement;
+    expect(box.checked).toBe(false);
+    box.click();
+
+    await waitFor(() => expect(fetchCalls('/config').length).toBe(1));
+    expect(bodyOf(fetchCalls('/config')[0])).toEqual({ autoRestart: true });
+    expect(fetchCalls('/config')[0].url).toContain('/api/projects/demo/config');
+  });
+
+  test('turning it off sends false, not nothing', async () => {
+    apiState.projects = [makeProject({ id: 'demo', name: 'demo', autoRestart: true })];
+    render(<App />);
+    (await screen.findByText('demo')).click();
+    const box = (await screen.findByText(/Bring it back automatically/))
+      .closest('label')!
+      .querySelector('input') as HTMLInputElement;
+    expect(box.checked).toBe(true);
+    box.click();
+    await waitFor(() => expect(fetchCalls('/config').length).toBe(1));
+    expect(bodyOf(fetchCalls('/config')[0])).toEqual({ autoRestart: false });
+  });
+
+  test('a project that cannot be launched is not offered crash recovery', async () => {
+    apiState.projects = [makeProject({ id: 'static', name: 'static', runnable: false })];
+    render(<App />);
+    (await screen.findByText('static')).click();
+    await waitFor(() => expect(document.querySelector('.drawer')).toBeTruthy());
+    expect(screen.queryByText(/Bring it back automatically/)).toBeNull();
+  });
+});

@@ -122,7 +122,7 @@ npm run dev        # Fastify (:7777) + Vite (:5180) with HMR
 ### Tests
 
 ```sh
-npm test           # 157 server tests (node:test) + 14 frontend tests (vitest)
+npm test           # 157 server tests (node:test) + 18 frontend tests (vitest)
 npm run test:server
 npm run test:web
 ```
@@ -158,7 +158,7 @@ the dashboard. Per project you can override:
 | `env` | Extra environment variables (`${PORT}` is substituted) |
 | `hidden` / `runnable` | Hide a card / mark it non-launchable |
 | `cwd` | Working directory |
-| `autoRestart` | Bring this project back up if it **crashes** (non-zero exit) while running. Off by default. Bounded by `settings.autoRestartMax` (3) with a growing wait; never fires after you stop it, or for a start that never came up. |
+| `autoRestart` | Bring this project back up if it **crashes** (non-zero exit) while running. Off by default; there is a switch for it in the card drawer, and an armed card is marked in the grid. Bounded by `settings.autoRestartMax` (3) with a growing wait; never fires after you stop it, or for a start that never came up. |
 | `registry` | Where the published-version badge looks: `{ "kind": "npm"|"pypi"|"none", "name": "pkg" }`. Only needed when the manifest cannot say it — e.g. a `private` workspace root whose published package is a member. |
 
 Global settings live under `settings` (`projectsRoot`, `dashboardPort`,
