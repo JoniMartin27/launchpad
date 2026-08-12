@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💡 Idea or question
+    url: https://github.com/JoniMartin27/launchpad/discussions
+    about: Feature ideas, "does it support…?", and anything not yet a bug.
+  - name: 🔒 Security issue
+    url: https://github.com/JoniMartin27/launchpad/security/advisories/new
+    about: Report privately. See SECURITY.md for what counts as a vulnerability.

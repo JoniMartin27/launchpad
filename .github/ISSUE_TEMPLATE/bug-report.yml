@@ -1,0 +1,55 @@
+name: "🐛 Bug report"
+description: Something in the dashboard, the API or process control misbehaves.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If the problem is that a project was not detected or was launched with
+        the wrong command, use the **Project not detected** template instead —
+        it asks for exactly what's needed to fix that class of bug.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. npm start
+        2. Click Start on a Vite project
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: >
+        Server console output, the drawer's log panel, or the browser console.
+        Secrets from your projects' env vars can appear in dev-server logs —
+        please redact before pasting.
+      render: shell
+
+  - type: input
+    id: env
+    attributes:
+      label: OS, Node version, and how you run it
+      placeholder: "Windows 11 / Node 22 / npm start (built UI)"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I am on the latest `main`.
+        - label: "`npm test` passes on my machine (or I have said which tests fail)."
