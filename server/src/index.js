@@ -18,11 +18,14 @@ import {
   validateConfig,
   DEFAULT_SETTINGS,
   REPO_ROOT,
+  CONFIG_PATH,
 } from './config.js';
 import { discover, seedConfig } from './discovery.js';
 import { Catalog } from './catalog.js';
 import { WsHub, isLoopback } from './ws.js';
-import { Launcher } from './launcher.js';
+import { Launcher, isPidAlive } from './launcher.js';
+import { stateFileFor, loadState, saveState, reconcile } from './state.js';
+import { isPortInUse } from './ports.js';
 import { startWatcher } from './watcher.js';
 import { startWarmer } from './warmer.js';
 import { parseJsonBodyAllowEmpty } from './parsers.js';
@@ -112,6 +115,42 @@ rediscover();
 // ---------------------------------------------------------------------------
 // 3. Build Fastify app (bound to 127.0.0.1 only).
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// 2b. Adopt anything a previous run left behind.
+//
+// An orderly shutdown kills the children, so there is normally nothing here. A
+// hard kill of the dashboard is the case this exists for: the dev servers keep
+// running, and without adoption the next boot shows them as "stopped", refuses
+// to start them (`PORT_IN_USE`), and offers no way to stop what it does not
+// know it owns.
+// ---------------------------------------------------------------------------
+const STATE_FILE = stateFileFor(CONFIG_PATH);
+
+function persistRunning() {
+  saveState(STATE_FILE, catalog.runningSnapshot());
+}
+
+async function adoptPrevious() {
+  const saved = loadState(STATE_FILE).running;
+  if (!saved.length) return;
+  const { adopt, drop } = await reconcile(saved, {
+    isAlive: isPidAlive,
+    isPortBound: (port) => isPortInUse(port).catch(() => false),
+  });
+  for (const entry of adopt) {
+    // Only adopt projects the catalog still knows about; a folder can vanish
+    // while its process lives on, and inventing a card for it would be worse.
+    if (!catalog.getLaunchable(entry.id)) continue;
+    catalog.adoptRuntime(entry.id, entry);
+    console.log(`[mission-control] adopted ${entry.id} (pid ${entry.pid}, port ${entry.port}) from a previous run`);
+  }
+  for (const { entry, reason } of drop) {
+    if (entry?.id) console.log(`[mission-control] forgetting ${entry.id}: ${reason}`);
+  }
+  persistRunning();
+}
+await adoptPrevious();
+
 const app = Fastify({
   logger: { level: process.env.LOG_LEVEL || 'warn' },
 });
@@ -141,7 +180,14 @@ app.addHook('onRequest', async (req, reply) => {
 // ---------------------------------------------------------------------------
 const wsProxy = {
   broadcastLog: (...a) => ws?.broadcastLog(...a),
-  broadcastStatus: (...a) => ws?.broadcastStatus(...a),
+  // Every lifecycle transition already funnels through here, which makes it the
+  // one place that always knows what is up — so it is also where the state file
+  // is refreshed. Writing it from the routes instead would miss the transitions
+  // that come from a child dying on its own.
+  broadcastStatus: (...a) => {
+    ws?.broadcastStatus(...a);
+    persistRunning();
+  },
   broadcastWarning: (...a) => ws?.broadcastWarning(...a),
   broadcastCatalog: (...a) => ws?.broadcastCatalog(...a),
   broadcastInstallLog: (...a) => ws?.broadcastInstallLog(...a),

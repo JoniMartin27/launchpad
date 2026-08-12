@@ -227,7 +227,12 @@ export function DetailDrawer(props: Props) {
               emptyHint={
                 showInstallStream
                   ? 'Press Install to set this project up — output will appear here.'
-                  : undefined
+                  : p.adopted
+                    ? // Honest about a real limit: this process was already running
+                      // when the dashboard started, so its output went somewhere we
+                      // never had a handle on. Stop and start it to get logs back.
+                      'This one was already running when the dashboard started, so its output is not ours to show. Stop and start it to stream logs again.'
+                    : undefined
               }
             />
           </section>

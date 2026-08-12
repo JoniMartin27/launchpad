@@ -348,7 +348,23 @@ export class Launcher {
     // the browser learns the real outcome from the `stopped` WS event that the
     // child's own exit handler pushes. So we answer 202 (accepted, in progress)
     // and let the kill finish in the background.
-    const killing = this.kill(pid).catch(() => {});
+    // An adopted process (recovered from a previous run of the dashboard) has
+    // no child handle, so no 'exit' event will ever fire for it. Nobody would
+    // move it out of `stopping`, and the card would hang there forever — so we
+    // confirm the death ourselves once the kill lands.
+    const killing = this.kill(pid)
+      .catch(() => {})
+      .then(async () => {
+        if (!rt.adopted) return;
+        await waitFor(() => !isPidAlive(pid), 5000);
+        // `adopted` described a live process we had inherited; once it is gone
+        // the card is just stopped, and should not keep claiming its logs are
+        // unavailable for a reason that no longer applies.
+        this.catalog.setStatus(id, { status: 'stopped', exitCode: null, reason: 'stopped', adopted: false });
+        this.catalog.clearChild(id);
+        this._broadcastStatus(id, 'stopped', { exitCode: null });
+      });
+
     if (wait) {
       await killing;
       return { status: 200, body: { ok: true, id, status: 'stopping' } };
@@ -476,6 +492,22 @@ export class Launcher {
   async killAll() {
     const pids = this.catalog.allTrackedPids();
     await Promise.all(pids.map((pid) => this.kill(pid)));
+  }
+}
+
+/**
+ * Is this pid still around? Exported because adoption needs the same check on
+ * boot, before any child of ours exists.
+ * @param {number} pid
+ * @returns {boolean}
+ */
+export function isPidAlive(pid) {
+  if (!pid) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return err?.code === 'EPERM'; // exists, owned by someone else
   }
 }
 

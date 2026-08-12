@@ -55,6 +55,9 @@ replaces all of that with one screen.
   and edit a project's manifest (or add a lockfile) and its card re-classifies
   itself. No restart, no Rescan button. Watching is filtered to the manifests
   that matter, so build output costs nothing.
+- **Survives its own crash** — if the dashboard is killed hard, your dev servers
+  keep running; the next boot adopts the ones still holding their ports so you
+  can stop them from the grid instead of hunting for a pid.
 - **Clean process control** — start/stop with a full process-tree kill on both
   platforms (`taskkill /T /F` on Windows; SIGTERM to the process group, then
   SIGKILL, on macOS/Linux), so nothing is left holding a port.
@@ -119,7 +122,7 @@ npm run dev        # Fastify (:7777) + Vite (:5180) with HMR
 ### Tests
 
 ```sh
-npm test           # 135 server tests (node:test) + 14 frontend tests (vitest)
+npm test           # 146 server tests (node:test) + 14 frontend tests (vitest)
 npm run test:server
 npm run test:web
 ```

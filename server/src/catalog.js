@@ -214,6 +214,52 @@ export class Catalog {
     return pids;
   }
 
+  /**
+   * Everything currently up, in the shape the state file stores — so a hard
+   * kill of the dashboard does not orphan processes it can no longer stop.
+   * @returns {object[]}
+   */
+  runningSnapshot() {
+    const out = [];
+    for (const [id, rt] of this.runtime) {
+      if (rt.status !== 'running' && rt.status !== 'starting') continue;
+      if (!rt.pid) continue;
+      out.push({
+        id,
+        pid: rt.pid,
+        port: rt.assignedPort ?? null,
+        portless: rt.portless === true,
+        command: rt.command || null,
+        startedAt: rt.startedAt || null,
+      });
+    }
+    return out;
+  }
+
+  /**
+   * Re-attach to a process this dashboard started in a previous life. There is
+   * no child handle and no stdio to recover, so `adopted` is recorded: the UI
+   * says logs are unavailable rather than showing an empty console as if the
+   * project were silent, and `stop` knows it must confirm the death itself
+   * instead of waiting for an 'exit' event that will never come.
+   * @param {string} id
+   * @param {object} entry  { pid, port, command, startedAt }
+   */
+  adoptRuntime(id, entry) {
+    this.runtime.set(id, {
+      status: 'running',
+      pid: entry.pid,
+      child: null,
+      adopted: true,
+      assignedPort: entry.port ?? null,
+      startedAt: entry.startedAt || new Date().toISOString(),
+      exitCode: null,
+      command: entry.command || null,
+      portless: false,
+      statusChangedAt: Date.now(),
+    });
+  }
+
   /** Count of running projects (for /api/health). */
   runningCount() {
     let n = 0;
@@ -315,6 +361,11 @@ export class Catalog {
       installing: rt?.installing === true,
       failureClass: rt?.failureClass ?? (inst.needsInstall ? 'needs-install' : null),
       failureReason: status === 'error' ? rt?.reason ?? inst.reason ?? null : inst.needsInstall ? inst.reason : null,
+
+      // Adopted from a previous run of the dashboard: we can stop it, but its
+      // output went to a process tree we no longer own. Saying so beats showing
+      // an empty log panel as if the project had gone quiet.
+      adopted: rt?.adopted === true,
 
       lastLogLine: this.lastLog.get(id) ?? null,
 
