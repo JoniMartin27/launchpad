@@ -483,3 +483,65 @@ vacíos llamados `{}` que se colaron en el repo.
 9. **Nadie ha probado el paquete de npm en macOS o Linux**: un job de CI que
    empaquete e invoque el CLI cerraría el hueco.
 10. **Sin telemetría de adopción** más allá de las descargas de npm.
+
+---
+
+## Iteración 8 — 2026-08-12
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `dc76b8b` · 125 tests de servidor + 12 de frontend |
+| npm | 1.1.0 — **cinco iteraciones de mejoras sin publicar** |
+| CI / PRs / issues | verde en 4 jobs + Veredicto · 0 · 0 · 1 estrella · audit 0 |
+
+### Qué se cambió — [PR #23](https://github.com/JoniMartin27/launchpad/pull/23) (mejoras #3, #9 y #5)
+
+**`stop` contesta 202 al instante** en vez de esperar la ventana de gracia de
+POSIX; una parada en lote de cinco proyectos retenía la respuesta diez segundos
+para nada, porque el resultado real viaja por WebSocket. Queda
+`stop(id,{wait:true})` para `restart`.
+
+**Humo del paquete en Linux, macOS y Windows**: se empaqueta el tarball de
+verdad, se instala en un workspace desechable y se le pregunta al servidor qué
+encontró. **En su primera ejecución pilló un fallo real: `npm pack` producía un
+tarball SIN interfaz** (`files` incluye `web/dist` pero nada lo construía;
+`prepublishOnly` cubre el publish, no el pack). Arreglado con `prepack`.
+
+**v1.2.0** etiquetada y [publicada en GitHub](https://github.com/JoniMartin27/launchpad/releases/tag/v1.2.0).
+
+**Mutante que sobrevivía:** el test que cronometraba `stop` pasaba en Windows
+aunque se repusiera el `await`, porque ahí `taskkill` es instantáneo. El
+launcher recibe ahora **el matador por inyección** para que la pregunta se pueda
+responder en los dos sistemas. Y ese test colgó el runner tres minutos la
+primera vez: el doble mataba el shell y dejaba huérfano al nieto, fuera del
+alcance de `taskkill /T`, manteniendo abierta la salida.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **129 de servidor + 12 de frontend** |
+| CI | **8 checks verdes**: 4 de build/test + 3 de humo del paquete + Veredicto |
+| macOS | probado por primera vez: detecta los 3 proyectos de prueba |
+| En vivo | stop → **HTTP 202 en 120 ms**, puerto liberado, `portInUse:false` |
+| Versión | 1.2.0 en `main` y etiquetada · **pendiente humano: `npm publish`** |
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **Publicar la 1.2.0 en npm** (`npm publish`, necesita el 2FA de Jonathan) y
+   difundir con Pregón. Hasta entonces el README promete cosas que el paquete
+   instalado no tiene.
+2. **Abrir en editor / terminal / carpeta** desde la tarjeta.
+3. **Autoreinicio al caer y persistencia entre reinicios del panel.**
+4. **Captura y GIF del README** son de junio: sin banda de avisos ni botones de
+   lote. Es lo primero que ve quien llega desde npm.
+5. **Los perfiles no se pueden crear desde la UI**, ni hay selector en la barra.
+6. **El escaneo sigue siendo síncrono**; `fs.promises` con concurrencia acotada.
+7. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto.
+8. **`restart` sigue bloqueando** hasta 8 s esperando que el puerto se libere;
+   podría seguir el mismo patrón de 202 que `stop`.
+9. **El humo del paquete no prueba arrancar un proyecto**, solo detectarlo:
+   levantar el estático y comprobar que sirve cerraría el círculo en macOS.
+10. **Sin telemetría de adopción** más allá de las descargas de npm.
