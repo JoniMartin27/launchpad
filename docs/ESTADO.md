@@ -545,3 +545,63 @@ alcance de `taskkill /T`, manteniendo abierta la salida.
 9. **El humo del paquete no prueba arrancar un proyecto**, solo detectarlo:
    levantar el estático y comprobar que sirve cerraría el círculo en macOS.
 10. **Sin telemetría de adopción** más allá de las descargas de npm.
+
+---
+
+## Iteración 9 — 2026-08-12
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `a5f93f1` · 129 tests de servidor + 12 de frontend |
+| npm | **1.1.0** — la 1.2.0 etiquetada pero sin publicar (pendiente del 2FA) |
+| CI / PRs / issues | 8 checks verdes · 0 · 0 · 1 estrella · audit 0 |
+
+### Qué se cambió — [PR #24](https://github.com/JoniMartin27/launchpad/pull/24) (mejora #2)
+
+Abrir un proyecto en **el editor, la carpeta o una terminal** desde el drawer.
+El endpoint existía desde el principio y **la interfaz no lo llamaba nunca**;
+además solo sabía de VS Code. Ahora el editor es `settings.editorCommand` y cada
+sistema recibe su herramienta.
+
+**Fallo de seguridad que había debajo:** la ruta usaba
+`execFile(cmd, [ruta], { shell: true })`, que concatena los argumentos en una
+cadena de shell **sin escaparlos** (Node lo avisa: DEP0190). Una carpeta llamada
+`demo & whoami` **ejecutaba `whoami`** al abrirla, y basta clonar un repositorio
+para elegir el nombre. Comprobado en local antes de tocar nada. Arreglo
+estructural: `shell: false` y la ruta como argumento propio, nunca concatenada.
+La decisión vive en `opener.js` como función pura, así que la matriz de tres
+sistemas se prueba desde una sola máquina.
+
+**Y lo que solo sale probando:** `explorer.exe` devuelve código 1 aunque haya
+abierto la ventana, así que el panel decía «explorer no está instalado» siempre.
+Ahora solo cuenta como fallo no poder **lanzar** la herramienta.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **135 de servidor + 14 de frontend** |
+| Mutantes | 5 muertos (volver a `shell:true`, target libre, herramienta única, target fijo en la UI, exención de explorer) |
+| CI | 8 checks verdes · Veredicto limpio |
+| En vivo | target inválido → 400 con la lista; `folder` → abre el explorador y `{"ok":true}`; start → 200 en :4009 → stop → puerto liberado |
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **Publicar la 1.2.0 en npm** (`npm publish`, 2FA de Jonathan) y difundir.
+   Hasta entonces el paquete instalado no tiene nada de las últimas 6
+   iteraciones. Ahora además habría que etiquetar una 1.3.0 con esto.
+2. **Autoreinicio al caer y persistencia entre reinicios del panel.**
+3. **Captura y GIF del README** son de junio: sin banda de avisos, sin botones
+   de lote, sin los de abrir. Es lo primero que ve quien llega desde npm.
+4. **Los perfiles no se pueden crear desde la UI**, ni hay selector en la barra.
+5. **El escaneo sigue siendo síncrono**; `fs.promises` con concurrencia acotada.
+6. **`restart` sigue bloqueando** hasta 8 s esperando que el puerto se libere.
+7. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto.
+8. **El humo del paquete solo prueba que detecta**, no que arranque: levantar el
+   estático y comprobar que sirve cerraría el círculo en macOS.
+9. **`shell: true` sigue en el launcher** para los comandos de arranque. Ahí es
+   deliberado (los comandos vienen de la configuración y llevan pipes y flags),
+   pero merece una nota explícita en SECURITY.md ahora que la otra vía se cerró.
+10. **Sin telemetría de adopción** más allá de las descargas de npm.
