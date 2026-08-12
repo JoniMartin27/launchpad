@@ -97,3 +97,48 @@ jobs:
         shell: bash
         working-directory: ${{ runner.temp }}/ws
         run: cat .launchpad.json
+
+      # Detecting a project is half the job. THIS is the other half, and it had
+      # never run outside Windows: start something for real, watch it serve,
+      # stop it, and prove the port came back. The POSIX tree-kill (SIGTERM to
+      # the process group, then SIGKILL) has unit tests, but until now nothing
+      # exercised the whole path — spawn a shell, which spawns a server, which
+      # binds a port — on Linux or macOS.
+      - name: It launches a project, serves it, and gives the port back
+        shell: bash
+        working-directory: ${{ runner.temp }}/ws
+        run: |
+          set -euo pipefail
+          PORT=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.launchpad.json','utf8')).projects['demo-static'].port)")
+          echo "demo-static is assigned port ${PORT}"
+
+          curl -sf -X POST -H 'content-type: application/json' \
+            "http://127.0.0.1:7788/api/projects/demo-static/start" > start.json
+          cat start.json
+
+          # `npx serve` has to be fetched on first use, so give it room.
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null "http://127.0.0.1:${PORT}/"; then break; fi
+            sleep 2
+          done
+          curl -sf "http://127.0.0.1:${PORT}/" | grep -q 'hola' || {
+            echo 'the launched project never served its content'
+            curl -sf "http://127.0.0.1:7788/api/projects/demo-static/logs?tail=40" || true
+            exit 1
+          }
+          echo "served on ${PORT}"
+
+          curl -sf -X POST -H 'content-type: application/json' \
+            "http://127.0.0.1:7788/api/projects/demo-static/stop" > stop.json
+          cat stop.json
+
+          # The whole point of the tree-kill: the port must actually come back.
+          for i in $(seq 1 30); do
+            if ! curl -sf -o /dev/null --max-time 2 "http://127.0.0.1:${PORT}/"; then
+              echo "port ${PORT} released"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "port ${PORT} is STILL served after stop — the tree-kill left an orphan"
+          exit 1

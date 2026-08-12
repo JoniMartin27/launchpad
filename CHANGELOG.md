@@ -4,7 +4,7 @@ All notable changes to Mission Control are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims
 at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] — 2026-08-12
 
 ### Added
 
@@ -27,6 +27,17 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Opening a folder on Windows no longer claims the tool is missing:
   `explorer.exe` exits 1 even when it worked, so only a failure to *launch* it
   counts as an error now.
+
+### Changed
+
+- **The package smoke test now launches a project**, not just detects one: on
+  Linux, macOS and Windows it starts a project from the installed package,
+  fetches what it serves, stops it and requires the port back. The POSIX
+  tree-kill had unit tests but the full path — spawn a shell, which spawns a
+  server, which binds a port — had never run outside Windows.
+- `SECURITY.md` states where a shell is used and where it deliberately is not,
+  and a test enforces it: adding `shell: true` to a new code path fails the
+  suite until it is justified in that list.
 
 ## [1.2.0] — 2026-08-12
 
