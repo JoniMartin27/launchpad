@@ -316,8 +316,10 @@ export default function App() {
               ⚠
             </span>
             <ul className="warn-list">
-              {warnings.map((w) => (
-                <li key={w}>{w}</li>
+              {warnings.map((w, i) => (
+                // Indexed key: the list is replaced wholesale on every scan, and
+                // two warnings can legitimately read the same.
+                <li key={`${i}-${w}`}>{w}</li>
               ))}
             </ul>
           </div>
