@@ -59,6 +59,6 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^10.0.4"
   }
 }
