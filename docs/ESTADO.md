@@ -425,3 +425,61 @@ porque ninguno levanta `index.js`.
 9. **Nadie ha probado el paquete de npm en macOS o Linux.** El CI corre los
    tests en Linux, pero el flujo `npx` completo solo se ha verificado en Windows.
 10. **Sin telemetría de adopción** más allá de las descargas de npm.
+
+---
+
+## Iteración 7 — 2026-08-12
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `4c864b9` · 116 tests de servidor + 7 de frontend |
+| Cambios ajenos | Veredicto en CI (it.6) y un test de `--` en binarios directos (PR #21) |
+| CI / PRs / issues | verde · 0 · 0 · 1 estrella · salud 100% · audit 0 |
+
+### Qué se cambió — [PR #22](https://github.com/JoniMartin27/launchpad/pull/22) (mejoras #1 y buena parte de #6)
+
+`POST /api/batch/start` y `/api/batch/stop` con `{ids}` o `{profile}`, perfiles
+con nombre en el config, `GET /api/profiles`, y dos botones en la barra:
+**▶ Start N** (lo arrancable que se ve ahora, respetando filtros) y
+**⏻ Stop all**.
+
+El contrato es por proyecto: uno que no arranca **nunca aborta el resto**, y un
+lote parcial responde **207**, no 200. El frontend deja de tener solo tests de
+render: 5 nuevos **pulsan los botones y comprueban qué sale del navegador**.
+
+**Fallo de portabilidad que solo vio el CI:** el proceso de mentira de los tests
+era `node -e "setTimeout(()=>{},60000)"`; con `shell: true` las comillas se
+pierden y `/bin/sh` se atraganta con los paréntesis, así que el hijo moría al
+instante **solo en Linux** y el segundo arranque devolvía `started` en vez de
+`already-running`. Windows se lo tragaba. Era además el origen de dos ficheros
+vacíos llamados `{}` que se colaron en el repo.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **125 de servidor + 12 de frontend** |
+| Mutantes | 5 muertos (abortar al fallar, siempre 200, perfil fantasma, «arrancable» incluye lo que corre, «Stop all» manda todos) |
+| Veredicto | ✅ limpio |
+| En vivo | perfil de 2 proyectos arrancado de una vez → **:4009 y :4010 sirviendo 200**; **Stop all pulsado en el navegador** → nada arriba, ambos puertos liberados |
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **Abrir en editor / terminal / carpeta** desde la tarjeta.
+2. **Autoreinicio al caer y persistencia entre reinicios del panel.**
+3. **`stop` bloquea hasta 2 s en POSIX**; debería devolver `202` al instante.
+4. **Captura y GIF del README** son de junio: es lo primero que ve quien llega
+   desde npm y ya no se parece al producto (faltan la banda de avisos y los
+   botones de lote).
+5. **Publicar la 1.2.0**: hay mucho sin publicar desde la 1.1.0 (scanDepth,
+   avisos, caché, watcher de manifiestos, lotes y perfiles).
+6. **Los perfiles no se pueden crear desde la UI**, solo editando el config a
+   mano; y no hay selector de perfil en la barra.
+7. **El escaneo sigue siendo síncrono**; `fs.promises` con concurrencia acotada
+   quitaría el bloqueo del todo.
+8. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto.
+9. **Nadie ha probado el paquete de npm en macOS o Linux**: un job de CI que
+   empaquete e invoque el CLI cerraría el hueco.
+10. **Sin telemetría de adopción** más allá de las descargas de npm.
