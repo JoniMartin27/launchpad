@@ -199,8 +199,11 @@ export interface WsWarning {
   type: 'warning';
   ts: string;
   projectId: string;
+  /** Stable, machine-readable. Not for showing to a person. */
   code: string;
   message: string;
+  /** How bad this is. Absent on older servers, where everything was an error. */
+  level?: 'info' | 'warn' | 'error';
 }
 
 export interface WsPong {

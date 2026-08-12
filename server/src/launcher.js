@@ -131,7 +131,13 @@ export class Launcher {
       const free = await isPortFreeStrict(port);
       if (!free) {
         // Could be a stale prior run of ours, but per SPEC we warn & refuse.
-        this.ws.broadcastWarning(id, 'PORT_IN_USE', `Port ${port} in use by a foreign process; not launched.`);
+        this.ws.broadcastWarning(
+          id,
+          'PORT_IN_USE',
+          `Port ${port} in use by a foreign process; not launched.`,
+          // The launch did not happen. That is a failure, not a caveat.
+          'error'
+        );
         return { status: 409, body: { error: { code: 'PORT_IN_USE', message: `Port ${port} is already in use by a foreign process.`, details: { port } } } };
       }
     }
@@ -295,7 +301,10 @@ export class Launcher {
             this.ws.broadcastWarning(
               id,
               'PORT_NOT_BOUND',
-              `Started but nothing is serving on the assigned port ${port} after 20s — for monorepos the port may not have propagated through concurrently. Check the project's own dev port.`
+              `Started but nothing is serving on the assigned port ${port} after 20s — for monorepos the port may not have propagated through concurrently. Check the project's own dev port.`,
+              // A caveat, not a failure: the process is alive and may well be
+              // useful on its own port.
+              'warn'
             );
             this.catalog.setStatus(id, { status: 'error', reason: `assigned port ${port} never bound (monorepo)` });
             this._broadcastStatus(id, 'error', { reason: `assigned port ${port} never bound (monorepo)` });
@@ -380,7 +389,13 @@ export class Launcher {
       // not get it; otherwise it is just noise about a feature they never
       // switched on.
       if (project.autoRestart === true && used >= (this.settings.autoRestartMax ?? DEFAULT_MAX_ATTEMPTS)) {
-        this.ws.broadcastWarning(id, 'AUTO_RESTART_GAVE_UP', `Not restarting ${id} again: ${decision.reason}.`);
+        this.ws.broadcastWarning(
+          id,
+          'AUTO_RESTART_GAVE_UP',
+          `Not restarting ${id} again: ${decision.reason}.`,
+          // You asked for recovery and you are not getting it. Say it loudly.
+          'error'
+        );
       }
       this.catalog.setStatus(id, { restartAttempts: 0 });
       return;
@@ -391,7 +406,10 @@ export class Launcher {
     this.ws.broadcastWarning(
       id,
       'AUTO_RESTARTING',
-      `${id} ${decision.reason}; restarting in ${Math.round(decision.delayMs / 1000)}s (attempt ${next}).`
+      `${id} ${decision.reason}; restarting in ${Math.round(decision.delayMs / 1000)}s (attempt ${next}).`,
+      // Good news: the dashboard is fixing something. Shouting it in red made
+      // the recovery look like the failure.
+      'info'
     );
 
     const timer = setTimeout(() => {

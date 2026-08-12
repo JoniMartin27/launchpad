@@ -6,12 +6,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Project, RunStatus, WsServerMessage } from '../types';
 import { getProjects, refresh as apiRefresh } from '../api/client';
 import { ws } from '../api/ws';
+import { warningTitle, warningToastKind } from '../utils/warnings';
 
 // Soft cap on mirrored log lines per project in the browser (server ring is the
 // source of truth; this is just what we keep for rendering).
 const MAX_LOG_LINES = 2000;
 
-export type ToastKind = 'info' | 'success' | 'error' | 'discovery';
+export type ToastKind = 'info' | 'warn' | 'success' | 'error' | 'discovery';
 
 export interface Toast {
   id: number;
@@ -293,9 +294,12 @@ export function useProjects() {
         case 'warning': {
           const proj = projectsRef.current.find((p) => p.id === msg.projectId);
           pushToast({
-            kind: 'error',
+            // The server says how bad it is; the UI no longer paints every
+            // warning red — "restarting in 2s" is the dashboard fixing
+            // something, and it used to read as the failure itself.
+            kind: warningToastKind(msg.level),
             projectId: msg.projectId,
-            title: proj ? `${proj.name}: ${msg.code}` : msg.code,
+            title: warningTitle(msg.code, proj?.name),
             detail: msg.message
           });
           break;

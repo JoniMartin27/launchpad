@@ -678,6 +678,9 @@ a:hover { color: var(--accent-bright); }
 .toast[data-kind="success"] { border-left-color: var(--status-ok); }
 .toast[data-kind="discovery"] { border-left-color: var(--accent); }
 .toast[data-kind="info"] { border-left-color: var(--status-info); }
+/* A caveat that needs your attention but is not a failure: the project started,
+   yet nothing is serving its port. Amber, not red. */
+.toast[data-kind="warn"] { border-left-color: var(--status-warn); }
 @keyframes toast-in { from { transform: translateY(12px); opacity: 0; } }
 .toast-body { flex: 1; min-width: 0; }
 .toast-title { font-size: var(--fs-label); font-weight: 600; color: var(--slate-9); }
