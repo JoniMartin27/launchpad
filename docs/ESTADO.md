@@ -662,3 +662,64 @@ nuevo**. Un comentario no habría evitado el fallo original.
 9. **`installState` asume npm/uv**: un proyecto Go o Rust sin dependencias
    instaladas no ofrece nada equivalente a Install.
 10. **Sin telemetría de adopción** más allá de las descargas de npm.
+
+---
+
+## Iteración 11 — 2026-08-12
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `1eb7edb` · 137 tests de servidor + 14 de frontend |
+| npm | **1.1.0** — 1.2.0 y 1.3.0 etiquetadas, ninguna publicada |
+| CI / PRs / issues | 8 checks verdes · 0 · 0 · 1 estrella · audit 0 |
+
+### Qué se cambió — [PR #26](https://github.com/JoniMartin27/launchpad/pull/26) (mitad grande de la mejora #2)
+
+**Adopción de procesos huérfanos.** Un apagado ordenado mata a los hijos; el
+feo (administrador de tareas, `kill -9`, cuelgue) no — y en POSIX menos, porque
+se lanzan con `detached`. El siguiente arranque no sabía nada de ellos: tarjeta
+en «parado», Start contestando `PORT_IN_USE`, y **ningún botón para parar algo
+que el panel no sabía que era suyo**. Ahora cada arranque se anota y al arrancar
+se adopta lo que siga vivo.
+
+**La condición es doble a propósito:** estar vivo no basta, porque los pids se
+reciclan; hace falta que **siga atado el puerto registrado**. Los proyectos sin
+puerto no se adoptan nunca — no hay prueba posible de identidad, y olvidarlos es
+más honesto que reclamarlos y arriesgarse a matar el proceso de un tercero.
+
+Consecuencias atendidas: un adoptado no tiene evento de salida, así que `stop`
+confirma él mismo la muerte; y sus logs no existen, así que el panel lo explica
+en vez de parecer vacío.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **146 de servidor + 14 de frontend** |
+| Mutantes | 4 muertos (adoptar solo por pid vivo, adoptar sin puerto, fichero corrupto que revienta, sin validar entradas) |
+| CI | 8 checks verdes · Veredicto limpio |
+| En vivo | huérfano real en :4009 → `adopted … from a previous run` → Stop desde la API → **puerto liberado** y estado a cero |
+
+**Nota de proceso:** los huérfanos de la simulación colgaron la suite (10 min de
+timeout) hasta que los maté. Limpiar los procesos simulados antes de correr los
+tests.
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **npm sigue en 1.1.0 con dos versiones etiquetadas sin publicar.** Once
+   iteraciones viven solo en GitHub.
+2. **Autoreinicio al caer** (la otra mitad de la #2): si un dev server se muere
+   solo, la tarjeta se queda roja sin reintento. Opt-in por proyecto y con
+   tope de intentos, que reiniciar en bucle algo que revienta es peor.
+3. **Captura y GIF del README** son de junio: sin banda de avisos, sin botones
+   de lote, sin los de abrir.
+4. **Los perfiles no se pueden crear desde la UI**, ni hay selector en la barra.
+5. **El escaneo sigue siendo síncrono**; `fs.promises` con concurrencia acotada.
+6. **`restart` sigue bloqueando** hasta 8 s esperando que el puerto se libere.
+7. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto.
+8. **La tarjeta no ofrece abrir en editor/terminal/carpeta**: hay que abrir el
+   drawer. Y los subproyectos no lo ofrecen en absoluto.
+9. **`installState` asume npm/uv**: Go o Rust sin dependencias no ofrecen nada.
+10. **Sin telemetría de adopción** más allá de las descargas de npm.
