@@ -119,7 +119,7 @@ npm run dev        # Fastify (:7777) + Vite (:5180) with HMR
 ### Tests
 
 ```sh
-npm test           # 96 server tests (node:test) + 7 frontend smoke tests (vitest)
+npm test           # 135 server tests (node:test) + 14 frontend tests (vitest)
 npm run test:server
 npm run test:web
 ```
@@ -158,7 +158,8 @@ the dashboard. Per project you can override:
 | `registry` | Where the published-version badge looks: `{ "kind": "npm"|"pypi"|"none", "name": "pkg" }`. Only needed when the manifest cannot say it — e.g. a `private` workspace root whose published package is a member. |
 
 Global settings live under `settings` (`projectsRoot`, `dashboardPort`,
-`portRange`, `metricsTtlSec`, `readyRegex`, `autoScan`, `scanDepth`, `maxProjectWatchers`).
+`portRange`, `metricsTtlSec`, `readyRegex`, `autoScan`, `scanDepth`, `maxProjectWatchers`,
+`editorCommand`).
 
 ### Projects in subfolders
 
@@ -169,6 +170,16 @@ max 3) so the grid stays stable. Nested projects are named after their trail
 (`work/api`), so two folders both called `api` never collide.
 
 A project folder is never descended into: a monorepo stays one card.
+
+### Getting to a project
+
+Open a card and the drawer offers the three things you would otherwise `cd` for:
+**your editor**, **the folder**, and **a terminal already in it**. Set
+`settings.editorCommand` to whatever you use (`code`, `subl`, `webstorm`,
+`nvim`…); the file manager and terminal are chosen per platform.
+
+Paths are taken from the catalog and passed to the tool as a separate argument
+with no shell involved, so a folder with a `&` in its name cannot run anything.
 
 ### Bringing up a whole stack
 

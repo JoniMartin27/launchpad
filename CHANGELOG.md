@@ -4,6 +4,30 @@ All notable changes to Mission Control are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims
 at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Open a project in your editor, your file manager or a terminal**, from the
+  detail drawer — the `cd` the README promises to save. `POST /api/open` takes a
+  `target` (`editor` / `folder` / `terminal`) and picks the right tool per
+  platform. The endpoint existed but nothing in the UI ever called it, and it
+  only knew about VS Code; the editor is now `settings.editorCommand`, so
+  `subl`, `webstorm` or `nvim` work just as well.
+
+### Fixed
+
+- **A project folder could run commands.** The old open route used
+  `execFile(cmd, [path], { shell: true })`, which concatenates arguments into a
+  shell string *without escaping them* — Node warns about exactly this
+  (DEP0190) — so a folder named `demo & whoami` executed `whoami` when opened.
+  Folder names are attacker-influenceable: cloning a repository is enough to
+  choose one. Every command is now spawned with `shell: false` and the path as
+  its own argument, so there is no metacharacter to escape in the first place.
+- Opening a folder on Windows no longer claims the tool is missing:
+  `explorer.exe` exits 1 even when it worked, so only a failure to *launch* it
+  counts as an error now.
+
 ## [1.2.0] — 2026-08-12
 
 ### Added

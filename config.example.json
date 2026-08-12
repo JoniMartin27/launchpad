@@ -11,7 +11,8 @@
     "metricsTtlSec": 60,
     "autoScan": true,
     "scanDepth": 1,
-    "readyRegex": "ready in|listening on|Local:\\s+http|started server|compiled|running at"
+    "readyRegex": "ready in|listening on|Local:\\s+http|started server|compiled|running at",
+    "editorCommand": "code"
   },
   "projects": {
     "my-app": {

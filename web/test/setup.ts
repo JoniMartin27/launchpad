@@ -112,6 +112,7 @@ beforeEach(() => {
   apiState.projects = [];
   apiState.warnings = [];
   apiState.batchResponse = null;
+  apiState.openFails = null;
   calls.length = 0;
   FakeWebSocket.instances.length = 0;
   vi.stubGlobal('WebSocket', FakeWebSocket as unknown as typeof WebSocket);
@@ -120,6 +121,15 @@ beforeEach(() => {
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(typeof input === 'string' ? input : (input as Request).url ?? input);
       calls.push({ url, init });
+      if (url.includes('/api/open')) {
+        if (apiState.openFails) {
+          return new Response(JSON.stringify({ error: apiState.openFails }), {
+            status: 503,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        return new Response('{"ok":true}', { status: 200, headers: { 'content-type': 'application/json' } });
+      }
       if (url.includes('/api/batch/')) {
         const fallback = { ok: true, action: 'start', requested: 0, succeeded: 0, failed: 0, results: [] };
         return new Response(JSON.stringify(apiState.batchResponse ?? fallback), {

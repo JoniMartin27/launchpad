@@ -7,6 +7,8 @@ export type RunStatus = 'stopped' | 'starting' | 'running' | 'stopping' | 'error
 export type TypeGroup = 'Node' | 'Python' | 'Static' | 'Docker' | 'Go' | 'Rust' | 'Other';
 /** Node package manager detected from the project's lockfile. */
 export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun';
+/** What a card can hand your project path to. */
+export type OpenTarget = 'editor' | 'folder' | 'terminal';
 
 /**
  * Visual/UX status the card actually renders. This is a SUPERSET of the

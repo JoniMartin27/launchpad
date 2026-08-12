@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Project, TypeGroup } from './types';
+import type { Project, TypeGroup, OpenTarget } from './types';
 import { useProjects } from './store/useProjects';
 import {
   startProject,
@@ -8,6 +8,7 @@ import {
   installProject,
   rescan as apiRescan,
   batchStart,
+  openIn,
   batchStop,
   ApiClientError
 } from './api/client';
@@ -291,6 +292,20 @@ export default function App() {
   );
   const handleStopAll = useCallback(() => void runBatch('stop', runningIds, 'stopping'), [runBatch, runningIds]);
 
+  const handleOpenIn = useCallback(
+    async (id: string, target: OpenTarget) => {
+      try {
+        await openIn(id, target);
+      } catch (e) {
+        const err = e as ApiClientError;
+        // A missing editor or terminal is a setup problem, not a crash: say
+        // which tool could not be run and carry on.
+        pushToast({ kind: 'error', projectId: id, title: `Couldn't open the ${target}`, detail: err.message });
+      }
+    },
+    [pushToast]
+  );
+
   // ---- open helpers ----
   const openApp = useCallback((p: Project) => {
     window.open(`http://127.0.0.1:${p.assignedPort}`, '_blank', 'noreferrer');
@@ -438,6 +453,7 @@ export default function App() {
           logs={logs[selected.id] || []}
           installLogs={installLogs[selected.id] || []}
           busy={busyIds.has(selected.id)}
+          onOpenIn={handleOpenIn}
           onClose={() => setSelectedId(null)}
           onStart={handleStart}
           onStop={handleStop}
