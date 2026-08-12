@@ -11,22 +11,58 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// server/src/config.js → repo root is two levels up.
+// server/src/config.js → package root is two levels up.
 export const REPO_ROOT = path.resolve(__dirname, '..', '..');
-export const CONFIG_PATH = path.join(REPO_ROOT, 'config.json');
 
 /**
- * Default folder to scan for projects. Generic & machine-agnostic:
- *   1. MISSION_CONTROL_PROJECTS_ROOT env var (explicit override), else
- *   2. the parent of this repo — Mission Control is meant to live *inside* the
- *      workspace folder it manages (…/projects/mission-control → …/projects).
- * This makes a fresh clone work with zero config on anyone's machine.
+ * Are we running from an installed package (`npx @fervon/launchpad`, a global
+ * or local dependency) rather than from a git checkout?
+ *
+ * It changes two things that would otherwise be nonsense: the folder we scan
+ * (the parent of an install dir is `node_modules`, not your projects) and where
+ * config is written (an npx install is a throwaway cache directory).
+ *
+ * @param {string} [root]
+ * @returns {boolean}
  */
-export function defaultProjectsRoot() {
+export function isInstalledPackage(root = REPO_ROOT) {
+  return path.resolve(root).split(path.sep).includes('node_modules');
+}
+
+/**
+ * Default folder to scan for projects:
+ *   1. `MISSION_CONTROL_PROJECTS_ROOT` (explicit override), else
+ *   2. installed as a package → the **current working directory**: you run
+ *      `npx @fervon/launchpad` from the folder you want managed, else
+ *   3. a git checkout → the parent of this repo, because Mission Control is
+ *      meant to live *inside* the workspace it manages
+ *      (…/projects/launchpad → …/projects).
+ * @returns {string}
+ */
+export function defaultProjectsRoot(root = REPO_ROOT) {
   const env = process.env.MISSION_CONTROL_PROJECTS_ROOT;
   if (env && env.trim()) return path.resolve(env.trim());
-  return path.resolve(REPO_ROOT, '..');
+  if (isInstalledPackage(root)) return path.resolve(process.cwd());
+  return path.resolve(root, '..');
 }
+
+/**
+ * Where config lives:
+ *   1. `MISSION_CONTROL_CONFIG` (explicit override), else
+ *   2. installed as a package → `.launchpad.json` **inside the projects root**,
+ *      so settings and port assignments belong to that workspace and survive
+ *      the throwaway npx cache, else
+ *   3. a git checkout → `config.json` at the repo root (unchanged).
+ * @returns {string}
+ */
+export function defaultConfigPath(root = REPO_ROOT) {
+  const env = process.env.MISSION_CONTROL_CONFIG;
+  if (env && env.trim()) return path.resolve(env.trim());
+  if (isInstalledPackage(root)) return path.join(defaultProjectsRoot(root), '.launchpad.json');
+  return path.join(root, 'config.json');
+}
+
+export const CONFIG_PATH = defaultConfigPath();
 
 /**
  * Port the dashboard itself listens on. `MISSION_CONTROL_PORT` overrides

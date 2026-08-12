@@ -4,9 +4,19 @@ All notable changes to Mission Control are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims
 at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] — 2026-08-12
 
 ### Added
+
+- **Published to npm as [`@fervon/launchpad`](https://www.npmjs.com/package/@fervon/launchpad).**
+  `cd ~/code && npx @fervon/launchpad` — no clone, no build step, nothing
+  installed globally. A `launchpad` CLI with `--port`, `--root`, `--config`,
+  `--version` and `--help`.
+- When running from an installed package, Mission Control scans the **current
+  working directory** and keeps its config as `.launchpad.json` **in that
+  folder**. (In a git checkout the previous behaviour is unchanged: scan the
+  parent, config at the repo root.) Without this, an npx run would have scanned
+  `node_modules` and written its config into a throwaway cache directory.
 
 - **Polyglot project detection**: Django, Flask, Go, Rust and Deno projects are
   detected and launchable; Docker Compose stacks are detected and labelled but
