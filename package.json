@@ -51,9 +51,10 @@
     "build": "npm -w web run build",
     "serve": "npm -w server run start",
     "test": "npm run test:server && npm run test:web",
-    "prepublishOnly": "npm test && npm run build",
     "test:server": "npm -w server test",
-    "test:web": "npm -w web test"
+    "test:web": "npm -w web test",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm test && npm run build"
   },
   "dependencies": {
     "@fastify/static": "^10.1.3",

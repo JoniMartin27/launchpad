@@ -13,6 +13,11 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   grace window (SIGTERM, up to two seconds, then SIGKILL) — a batch stop of five
   projects used to hold the response for ten. The final `stopped` still arrives
   over the WebSocket, which is where the UI reads it from anyway.
+- **`npm pack` can no longer produce a tarball without the dashboard.** `files`
+  ships `web/dist`, but nothing built it: the UI only made it in because
+  whoever packed had built first. A `prepack` script now runs the build, so
+  every tarball carries the interface. Caught by the new smoke job on its first
+  run — it installed the package and got "web/dist not built".
 - **The published package is smoke-tested on Linux, macOS and Windows.** A CI
   job packs the real tarball, installs it into a throwaway workspace of fake
   projects, runs the CLI and asks the running server what it found. The main
