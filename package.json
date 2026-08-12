@@ -1,6 +1,6 @@
 {
   "name": "@fervon/launchpad",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "Local-first dashboard to discover, launch and monitor every dev project in a folder — auto-detected, no port clashes, live logs. Binds 127.0.0.1 only.",
   "keywords": [

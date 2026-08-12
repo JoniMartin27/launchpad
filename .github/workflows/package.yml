@@ -1,0 +1,99 @@
+# Does the PUBLISHED package actually work?
+#
+# The main CI proves the source passes its tests. It says nothing about the
+# tarball people install: `files` could miss `web/dist`, the bin could lose its
+# shebang, a runtime dependency could be left in the workspace package.json
+# instead of the root, or path handling could break outside Windows. Every one
+# of those ships green.
+#
+# So this packs the real tarball, installs it into a throwaway workspace of fake
+# projects, runs the CLI, and asks the running server whether it found them.
+name: Package
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    name: npx smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS matters on its own: nobody has ever run this package there, and
+        # the process handling differs from both Windows and Linux.
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Pack the tarball
+        run: npm pack --pack-destination "${{ runner.temp }}"
+
+      - name: Install it into a throwaway workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          WS="${RUNNER_TEMP}/ws"
+          mkdir -p "$WS/demo-static" "$WS/demo-go" "$WS/demo-vite"
+          echo '<!doctype html><h1>hola</h1>' > "$WS/demo-static/index.html"
+          printf 'module example.com/demo\n' > "$WS/demo-go/go.mod"
+          printf 'package main\nfunc main() {}\n' > "$WS/demo-go/main.go"
+          printf '{"name":"demo-vite","scripts":{"dev":"vite"},"devDependencies":{"vite":"^5"}}' > "$WS/demo-vite/package.json"
+          cd "$WS"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "$(ls "${RUNNER_TEMP}"/fervon-launchpad-*.tgz)"
+
+      - name: The CLI answers
+        shell: bash
+        working-directory: ${{ runner.temp }}/ws
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/launchpad --version
+          ./node_modules/.bin/launchpad --help | grep -q "one screen for every dev project"
+
+      - name: It serves, and it detected the workspace
+        shell: bash
+        working-directory: ${{ runner.temp }}/ws
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/launchpad --port 7788 > server.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -sf -o /dev/null "http://127.0.0.1:7788/api/projects"; then break; fi
+            sleep 1
+          done
+
+          echo '--- server log ---'; cat server.log
+
+          # The UI must be served from the packaged web/dist, not 404.
+          curl -sf -o /dev/null "http://127.0.0.1:7788/" || { echo 'the dashboard did not serve'; exit 1; }
+
+          # And discovery must have found the three fake projects, by the types
+          # their own files imply.
+          curl -sf "http://127.0.0.1:7788/api/projects" > projects.json
+          node -e "
+            const j = JSON.parse(require('fs').readFileSync('projects.json', 'utf8'));
+            const byId = Object.fromEntries(j.projects.map((p) => [p.id, p.type]));
+            console.log('detected:', JSON.stringify(byId));
+            const want = { 'demo-static': 'html5-static', 'demo-go': 'go-http', 'demo-vite': 'vite-react' };
+            for (const [id, type] of Object.entries(want)) {
+              if (byId[id] !== type) {
+                throw new Error(\`expected \${id} to be \${type}, got \${byId[id]}\`);
+              }
+            }
+            // The config belongs next to the projects, not in the npx cache.
+            require('fs').accessSync('.launchpad.json');
+          "
+
+      - name: Config landed in the workspace
+        shell: bash
+        working-directory: ${{ runner.temp }}/ws
+        run: cat .launchpad.json
