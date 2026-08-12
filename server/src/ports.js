@@ -40,6 +40,18 @@ export function isPortFree(port, host = '127.0.0.1') {
  * @returns {Promise<boolean>}
  */
 export async function isPortFreeStrict(port) {
+  // Ask first whether anything is actually SERVING there, on either stack.
+  // The bind checks below are IPv4-only, so a server listening on `::` — which
+  // is what `serve` does, and Vite by default on Windows — was invisible to
+  // them: the guard said "free", the project was launched onto an occupied
+  // port, and the card reported `running` on a port serving someone else.
+  //
+  // The connect probe is used rather than more bind checks on purpose: binding
+  // `::1` on a machine with IPv6 disabled fails with EADDRNOTAVAIL, which would
+  // read as "in use" and refuse every launch. A connection that cannot be made
+  // simply means nobody is there.
+  if (await isPortInUse(port)) return false;
+
   const a = await isPortFree(port, '127.0.0.1');
   if (!a) return false;
   const b = await isPortFree(port, '0.0.0.0');

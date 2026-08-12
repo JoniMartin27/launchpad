@@ -166,8 +166,23 @@ export class WsHub {
   }
 
   /** Push a non-fatal warning toast to ALL clients. */
-  broadcastWarning(projectId, code, message) {
-    const payload = JSON.stringify({ type: 'warning', ts: nowIso(), projectId, code, message });
+  /**
+   * Tell every dashboard something happened to a project outside the normal
+   * status flow.
+   *
+   * `level` matters as much as the text. Every one of these used to arrive as a
+   * red error toast, including "bringing it back up in 2s" — which is good
+   * news, and reads as a failure. The server is the only place that knows
+   * whether a given code is information, a caveat or a genuine problem, so it
+   * says so instead of leaving the UI to guess from a constant.
+   *
+   * @param {string} projectId
+   * @param {string} code       machine-readable, stable
+   * @param {string} message    written for a person
+   * @param {'info'|'warn'|'error'} [level='error']
+   */
+  broadcastWarning(projectId, code, message, level = 'error') {
+    const payload = JSON.stringify({ type: 'warning', ts: nowIso(), projectId, code, message, level });
     this._broadcastAll(payload);
   }
 

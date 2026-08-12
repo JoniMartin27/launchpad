@@ -6,6 +6,22 @@ at [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The port guard could not see IPv6.** Before launching, Mission Control
+  checks that the assigned port is free — but it only ever checked `127.0.0.1`
+  and `0.0.0.0`. A server bound to `::` (which is what `npx serve` does, and
+  Vite by default on Windows) was invisible to it, so a project was launched
+  onto an occupied port and then reported as **running** on a port serving
+  someone else's content. The readiness probe had been fixed for exactly this
+  years' worth of iterations ago; the guard never was.
+- **Warnings no longer shout the same way at good and bad news.** Every warning
+  arrived as a red error toast titled with the raw machine code — so
+  `AUTO_RESTARTING`, which means *the dashboard is bringing your project back*,
+  read exactly like `PORT_IN_USE`, which means *it did not launch*. The server
+  now sends a severity with each warning, and the UI shows written copy
+  ("That port is taken", "Bringing it back") instead of a SCREAMING_CONSTANT.
+
 ### Added
 
 - **Auto-restart after a crash**, opt-in per project (`autoRestart: true`). A dev
