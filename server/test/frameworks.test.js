@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { ruleForType, parseCommand, buildSpawnArgs, FRAMEWORKS, DEFAULT_RULE } from '../src/frameworks.js';
 
 test('parseCommand splits cmd and args with quotes', () => {
@@ -59,4 +60,31 @@ test('framework table has expected core entries', () => {
   for (const k of ['vite-react', 'next', 'fastapi-python', 'monorepo', 'html5-static']) {
     assert.ok(FRAMEWORKS[k], `missing framework ${k}`);
   }
+});
+
+test('lookspan launches the CLI (API + dashboard), not the bare Vite dev server', () => {
+  // config.json used to run `npm --workspace @lookspan/dashboard run dev`, which
+  // starts only the front-end: the UI came up with no API behind it, so every
+  // panel sat empty and the project looked broken. The CLI serves both on one
+  // port, which is the model this launcher assumes.
+  const { projects } = JSON.parse(
+    readFileSync(new URL('../../config.json', import.meta.url), 'utf8'),
+  );
+  const lookspan = projects.lookspan;
+  assert.ok(lookspan, 'lookspan missing from config.json');
+  assert.match(lookspan.command, /packages\/cli\/dist\/index\.js/);
+
+  // `node` is not a package-manager wrapper, so no `--` separator may appear —
+  // Node's parseArgs would treat everything after it as positional and the
+  // port would be silently ignored.
+  const rule = ruleForType('vite-react');
+  const { cmd, args } = buildSpawnArgs({
+    command: lookspan.command,
+    port: lookspan.port,
+    rule,
+    portFlag: lookspan.portFlag,
+  });
+  assert.equal(cmd, 'node');
+  assert.ok(!args.includes('--'), 'a `--` separator would break the port flag');
+  assert.deepEqual(args.slice(-2), ['--port', String(lookspan.port)]);
 });
