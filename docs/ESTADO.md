@@ -605,3 +605,60 @@ Ahora solo cuenta como fallo no poder **lanzar** la herramienta.
    deliberado (los comandos vienen de la configuración y llevan pipes y flags),
    pero merece una nota explícita en SECURITY.md ahora que la otra vía se cerró.
 10. **Sin telemetría de adopción** más allá de las descargas de npm.
+
+---
+
+## Iteración 10 — 2026-08-12
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `73691cd` · 135 tests de servidor + 14 de frontend |
+| npm | **1.1.0** — la 1.2.0 lleva un día etiquetada sin publicar |
+| CI / PRs / issues | 8 checks verdes · 0 · 0 · 1 estrella · audit 0 |
+
+### Qué se cambió — [PR #25](https://github.com/JoniMartin27/launchpad/pull/25) (mejoras #8 y #9)
+
+**El humo del paquete ahora arranca un proyecto de verdad.** Detectar es media
+función; la otra media —arrancar, servir, parar y recuperar el puerto— **no se
+había ejecutado nunca fuera de Windows**. El tree-kill de POSIX tenía tests
+unitarios, pero el camino completo (shell → servidor → puerto atado → matar el
+árbol) no lo había recorrido nadie en Linux ni macOS. Verificado en los tres:
+`npx serve . -l 4001` sirve el contenido y el puerto vuelve tras el stop.
+
+**La regla del shell deja de ser un comentario.** `SECURITY.md` dice dónde se
+usa (el comando de arranque, que viene de la configuración y lleva `&&` y pipes)
+y dónde no (cualquier valor derivado del sistema de ficheros — el fallo de la
+#24), y **un test recorre `server/src` y falla si aparece un `shell: true`
+nuevo**. Un comentario no habría evitado el fallo original.
+
+**v1.3.0** etiquetada y [publicada en GitHub](https://github.com/JoniMartin27/launchpad/releases/tag/v1.3.0).
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **137 de servidor + 14 de frontend** |
+| CI | 8 checks verdes · Veredicto limpio |
+| Ciclo completo en macOS/Linux | **arranca, sirve, para y libera el puerto** (primera vez) |
+| Mutantes | 2 muertos (shell en el opener, shell en la ruta) |
+| Versiones | 1.2.0 y 1.3.0 etiquetadas · **npm sigue en 1.1.0** |
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **npm sigue en 1.1.0 con DOS versiones etiquetadas sin publicar.** Todo lo de
+   nueve iteraciones está solo en GitHub. Es el cuello de botella del proyecto.
+2. **Autoreinicio al caer y persistencia entre reinicios del panel.**
+3. **Captura y GIF del README** son de junio: sin banda de avisos, sin botones
+   de lote, sin los de abrir. Es lo primero que ve quien llega desde npm.
+4. **Los perfiles no se pueden crear desde la UI**, ni hay selector en la barra.
+5. **El escaneo sigue siendo síncrono**; `fs.promises` con concurrencia acotada.
+6. **`restart` sigue bloqueando** hasta 8 s esperando que el puerto se libere.
+7. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto.
+8. **El drawer no ofrece «abrir» para subproyectos**, solo para el proyecto
+   raíz; y la tarjeta no tiene ninguno de los tres gestos (hay que abrir el
+   drawer).
+9. **`installState` asume npm/uv**: un proyecto Go o Rust sin dependencias
+   instaladas no ofrece nada equivalente a Install.
+10. **Sin telemetría de adopción** más allá de las descargas de npm.
