@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------
 
 import fs from 'node:fs';
+import path from 'node:path';
 
 // Names whose appearance/disappearance should never trigger a rescan.
 const IGNORE = new Set(['node_modules', '.git', 'tmp']);
@@ -31,8 +32,9 @@ const IGNORE = new Set(['node_modules', '.git', 'tmp']);
  * @param {number} [opts.debounceMs=750]
  * @returns {{ close: function():void }}
  */
-export function startWatcher({ root, onChange, onResult, debounceMs = 750 }) {
-  let watcher = null;
+export function startWatcher({ root, onChange, onResult, debounceMs = 750, depth = 1 }) {
+  /** @type {import('node:fs').FSWatcher[]} */
+  const watchers = [];
   let timer = null;
 
   const fire = () => {
@@ -56,29 +58,69 @@ export function startWatcher({ root, onChange, onResult, debounceMs = 750 }) {
     timer = setTimeout(fire, debounceMs);
   };
 
-  try {
-    // Shallow watch: events for direct children of `root`. `recursive:false`
-    // is the default; we keep it explicit for clarity and to avoid deep churn.
-    watcher = fs.watch(root, { persistent: true, recursive: false }, (_event, filename) => {
-      schedule(filename);
-    });
-    watcher.on('error', (err) => {
-      console.warn('[watcher] error:', err.message);
-    });
-    console.log(`[mission-control] watching ${root} for project changes`);
-  } catch (err) {
-    console.warn(`[watcher] could not watch ${root}:`, err.message);
+  /**
+   * Watch one directory shallowly. `recursive: false` is deliberate: we only
+   * care about folders appearing/disappearing, not about churn inside a project
+   * (node_modules writes, build output) which would spam rescans. It is also
+   * the only mode that behaves the same on Linux, where recursive fs.watch is
+   * not supported.
+   * @param {string} dir
+   */
+  const watchDir = (dir) => {
+    try {
+      const w = fs.watch(dir, { persistent: true, recursive: false }, (_event, filename) => {
+        schedule(filename);
+      });
+      w.on('error', (err) => console.warn('[watcher] error:', err.message));
+      watchers.push(w);
+      return true;
+    } catch (err) {
+      console.warn(`[watcher] could not watch ${dir}:`, err.message);
+      return false;
+    }
+  };
+
+  watchDir(root);
+
+  // With scanDepth > 1 the projects live one or more levels down, so watching
+  // only the root would miss every add/remove that matters. Watch the container
+  // folders too — one watcher per intermediate directory, still shallow.
+  if (depth > 1) {
+    const addLevel = (dir, level) => {
+      if (level >= depth) return;
+      let entries = [];
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const ent of entries) {
+        if (!ent.isDirectory() || ent.name.startsWith('.') || IGNORE.has(ent.name)) continue;
+        const child = path.join(dir, ent.name);
+        watchDir(child);
+        addLevel(child, level + 1);
+      }
+    };
+    addLevel(root, 1);
   }
+
+  console.log(
+    `[mission-control] watching ${root} for project changes` +
+      (watchers.length > 1 ? ` (+${watchers.length - 1} subfolders, scanDepth ${depth})` : '')
+  );
 
   return {
     close() {
       if (timer) clearTimeout(timer);
       timer = null;
-      try {
-        watcher?.close();
-      } catch {
-        /* ignore */
+      for (const w of watchers) {
+        try {
+          w.close();
+        } catch {
+          /* ignore */
+        }
       }
+      watchers.length = 0;
     },
   };
 }

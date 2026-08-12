@@ -115,7 +115,7 @@ export function getHealth(): Promise<HealthInfo> {
   return request<HealthInfo>('/api/health');
 }
 
-export function refresh(): Promise<{ ok: boolean; projects: Project[] }> {
+export function refresh(): Promise<{ ok: boolean; projects: Project[]; warnings?: string[] }> {
   return request('/api/refresh', { method: 'POST' });
 }
 
@@ -124,7 +124,7 @@ export function refresh(): Promise<{ ok: boolean; projects: Project[] }> {
  * Falls back to /api/refresh transparently if /api/rescan isn't deployed yet
  * (404 / NOT_FOUND), so the Rescan affordance always does *something* useful.
  */
-export async function rescan(): Promise<{ ok: boolean; projects: Project[] }> {
+export async function rescan(): Promise<{ ok: boolean; projects: Project[]; warnings?: string[] }> {
   try {
     return await request('/api/rescan', { method: 'POST' });
   } catch (e) {

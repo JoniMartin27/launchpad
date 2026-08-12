@@ -97,3 +97,22 @@ test('POST /api/refresh broadcasts catalog and returns projects', async () => {
   assert.ok(ws.events.some((e) => e[0] === 'catalog'));
   await app.close();
 });
+
+test('discovery warnings reach the API instead of dying in the server console', async () => {
+  const { app, catalog } = await buildApp();
+  // No warnings → an empty array, never a missing field the UI has to guess at.
+  let res = await app.inject({ method: 'GET', url: '/api/projects' });
+  assert.deepEqual(res.json().warnings, []);
+
+  // The catalog collects warnings during discovery (widened scan, port clash,
+  // a config entry pointing at a folder that is gone). They must travel.
+  catalog.setProjects([base('a')], ['no projects at depth 1 — found 3 at depth 2']);
+  res = await app.inject({ method: 'GET', url: '/api/projects' });
+  assert.deepEqual(res.json().warnings, ['no projects at depth 1 — found 3 at depth 2']);
+
+  // …and through the refresh/rescan responses too, so the banner updates.
+  for (const url of ['/api/refresh', '/api/rescan']) {
+    const r = await app.inject({ method: 'POST', url });
+    assert.deepEqual(r.json().warnings, ['no projects at depth 1 — found 3 at depth 2'], url);
+  }
+});

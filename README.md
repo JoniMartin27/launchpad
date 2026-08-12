@@ -153,7 +153,17 @@ the dashboard. Per project you can override:
 | `cwd` | Working directory |
 
 Global settings live under `settings` (`projectsRoot`, `dashboardPort`,
-`portRange`, `metricsTtlSec`, `readyRegex`, `autoScan`).
+`portRange`, `metricsTtlSec`, `readyRegex`, `autoScan`, `scanDepth`).
+
+### Projects in subfolders
+
+Keep your work in `code/work/*` and `code/personal/*`? Mission Control scans
+one level by default, notices it found nothing, **looks deeper on its own** and
+says so in a banner — then remembers the depth that worked (`settings.scanDepth`,
+max 3) so the grid stays stable. Nested projects are named after their trail
+(`work/api`), so two folders both called `api` never collide.
+
+A project folder is never descended into: a monorepo stays one card.
 
 ## Requirements
 

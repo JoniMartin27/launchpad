@@ -33,7 +33,7 @@ export default async function systemRoutes(app, ctx) {
     clearMetricsCache();
     // Tell open dashboards the catalog changed (same shape as the watcher).
     ws?.broadcastCatalog(diff, projects);
-    return { ok: true, projects };
+    return { ok: true, projects, warnings: catalog.warnings || [] };
   });
 
   // Re-run hybrid discovery and report what changed (SPEC item 3). Unlike
@@ -44,7 +44,7 @@ export default async function systemRoutes(app, ctx) {
     const diff = rediscover();
     const projects = catalog.toProjects();
     ws?.broadcastCatalog(diff, projects);
-    return { ok: true, added: diff.added, removed: diff.removed, changed: diff.changed, projects };
+    return { ok: true, added: diff.added, removed: diff.removed, changed: diff.changed, projects, warnings: catalog.warnings || [] };
   });
 
   // Open a project in VS Code. Path is validated against the catalog (§9).

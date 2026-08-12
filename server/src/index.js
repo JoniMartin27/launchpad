@@ -74,7 +74,23 @@ const catalog = new Catalog(settings);
  * @returns {{ added: string[], removed: string[], changed: string[] }}
  */
 function rediscover() {
-  const { projects, warnings } = discover(store.config);
+  const { projects, warnings, depthUsed } = discover(store.config);
+
+  // If discovery had to look deeper than configured to find anything, make that
+  // stick. Recomputing the fallback every scan is unstable: drop a single
+  // project at the top level of a `code/work/*` workspace and depth 1 stops
+  // being empty, so every nested project would vanish from the grid. Persisting
+  // the depth that actually worked keeps the catalog steady — and we say so.
+  if (depthUsed > (store.config.settings.scanDepth || 1)) {
+    store.config.settings.scanDepth = depthUsed;
+    try {
+      saveConfig(store.config);
+      console.log(`[mission-control] scanDepth set to ${depthUsed} (projects live in subfolders)`);
+    } catch (err) {
+      console.warn('[mission-control] could not persist scanDepth:', err.message);
+    }
+  }
+
   const diff = catalog.setProjects(projects, warnings);
   if (warnings.length) {
     for (const w of warnings) console.warn('[discovery]', w);
@@ -238,6 +254,7 @@ try {
   // (SPEC item 3). Running processes are preserved across the triggered rescan.
   fsWatcher = startWatcher({
     root: settings.projectsRoot,
+    depth: settings.scanDepth,
     onChange: () => rediscover(),
     onResult: (diff) => ws?.broadcastCatalog(diff, catalog.toProjects()),
   });

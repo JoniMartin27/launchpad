@@ -7,6 +7,7 @@
     "ringBytes": 262144,
     "metricsTtlSec": 60,
     "autoScan": true,
+    "scanDepth": 1,
     "readyRegex": "ready in|listening on|Local:\\s+http|started server|compiled|running at"
   },
   "projects": {

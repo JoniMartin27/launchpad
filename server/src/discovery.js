@@ -13,7 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ruleForType } from './frameworks.js';
-import { REPO_ROOT } from './config.js';
+import { REPO_ROOT, MAX_SCAN_DEPTH } from './config.js';
 
 // Folders that are never projects. Kept deliberately tiny and generic: the real
 // gate is `isProjectDir` (markers / own .git) plus the self-exclusion below.
@@ -533,42 +533,103 @@ function isProjectDir(dir) {
 export function scanFilesystem(projectsRoot, opts = {}) {
   const selfPath =
     opts.selfPath === undefined ? REPO_ROOT : opts.selfPath ? path.resolve(opts.selfPath) : null;
+  const depth = Math.max(1, Math.min(MAX_SCAN_DEPTH, Number(opts.depth) || 1));
   const out = [];
-  let entries = [];
-  try {
-    entries = fs.readdirSync(projectsRoot, { withFileTypes: true });
-  } catch {
-    return out;
-  }
-  for (const ent of entries) {
-    if (!ent.isDirectory()) continue;
-    if (ent.name.startsWith('.')) continue; // hidden/dot dirs (.claude, .vscode, .idea, .git)
-    if (SKIP_DIRS.has(ent.name)) continue;
-    if (ent.name.endsWith('.git')) continue; // bare repo backups
-    const dir = path.join(projectsRoot, ent.name);
-    // Never list the dashboard itself. Compared by resolved path, so it holds
-    // whatever the clone folder is named (`launchpad`, `mission-control`, …).
-    if (selfPath && path.resolve(dir) === selfPath) continue;
-    if (!isProjectDir(dir)) continue; // skip worktrees / stray non-project folders
-    const id = folderToId(ent.name);
-    const det = detectProject(dir, id);
-    out.push({
-      id,
-      folder: ent.name,
-      name: ent.name,
-      path: dir,
-      type: det.type,
-      typeGroup: typeGroupForType(det.type),
-      framework: det.framework,
-      repoUrl: det.repoUrl,
-      runnable: det.runnable,
-      discoveredCommand: det.devCommand,
-      defaultPort: det.defaultPort,
-      packageManager: det.packageManager,
-      subprojects: det.subprojects,
-    });
-  }
+
+  /**
+   * @param {string} dir        directory to list
+   * @param {string[]} trail    folder names from the root down to `dir`
+   * @param {number} level      1 = children of the root
+   */
+  const walk = (dir, trail, level) => {
+    let entries = [];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const ent of entries) {
+      if (!ent.isDirectory()) continue;
+      if (ent.name.startsWith('.')) continue; // hidden/dot dirs (.claude, .vscode, .idea, .git)
+      if (SKIP_DIRS.has(ent.name)) continue;
+      if (ent.name.endsWith('.git')) continue; // bare repo backups
+      const childDir = path.join(dir, ent.name);
+      // Never list the dashboard itself. Compared by resolved path, so it holds
+      // whatever the clone folder is named (`launchpad`, `mission-control`, …).
+      if (selfPath && path.resolve(childDir) === selfPath) continue;
+      const childTrail = [...trail, ent.name];
+
+      if (!isProjectDir(childDir)) {
+        // Not a project. It may still be a *container* of projects — the very
+        // common `code/work/*` + `code/personal/*` layout, which used to render
+        // an empty dashboard with no explanation. Descend if depth allows.
+        if (level < depth) walk(childDir, childTrail, level + 1);
+        continue;
+      }
+
+      // A real project. Nested ones get a path-derived id (`work/api` →
+      // `work-api`) so two `api` folders under different parents don't collide;
+      // top-level ids are unchanged, which keeps existing configs valid.
+      const id = childTrail.map(folderToId).join('-');
+      const det = detectProject(childDir, id);
+      out.push({
+        id,
+        folder: ent.name,
+        // Show the trail for nested projects so `work/api` and `personal/api`
+        // are told apart at a glance.
+        name: childTrail.join('/'),
+        path: childDir,
+        type: det.type,
+        typeGroup: typeGroupForType(det.type),
+        framework: det.framework,
+        repoUrl: det.repoUrl,
+        runnable: det.runnable,
+        discoveredCommand: det.devCommand,
+        defaultPort: det.defaultPort,
+        packageManager: det.packageManager,
+        subprojects: det.subprojects,
+      });
+      // A project's own subfolders are handled by detectSubprojects — never
+      // descend into one, or a monorepo would explode into dozens of cards.
+    }
+  };
+
+  walk(projectsRoot, [], 1);
   return out;
+}
+
+/**
+ * Scan, and if the configured depth finds nothing, look deeper before giving up.
+ *
+ * An empty grid is the worst possible first impression and used to be entirely
+ * silent: someone whose projects live in `code/work/*` saw a blank dashboard and
+ * no hint as to why. Rather than fail quietly we widen the search and *say so*,
+ * returning a warning the UI can surface along with the depth that worked.
+ *
+ * @param {string} projectsRoot
+ * @param {object} [opts]
+ * @param {number} [opts.depth=1]     configured scanDepth
+ * @param {string|null} [opts.selfPath]
+ * @returns {{ projects: object[], depthUsed: number, warnings: string[] }}
+ */
+export function scanWithFallback(projectsRoot, opts = {}) {
+  const configured = Math.max(1, Math.min(MAX_SCAN_DEPTH, Number(opts.depth) || 1));
+  const warnings = [];
+  let projects = scanFilesystem(projectsRoot, { ...opts, depth: configured });
+  if (projects.length) return { projects, depthUsed: configured, warnings };
+
+  for (let d = configured + 1; d <= MAX_SCAN_DEPTH; d++) {
+    projects = scanFilesystem(projectsRoot, { ...opts, depth: d });
+    if (projects.length) {
+      warnings.push(
+        `No projects directly under "${projectsRoot}" — found ${projects.length} one level deeper, ` +
+          `so scanning continues at depth ${d} (settings.scanDepth). ` +
+          `Point projectsRoot at a single folder if you'd rather keep the scan shallow.`
+      );
+      return { projects, depthUsed: d, warnings };
+    }
+  }
+  return { projects: [], depthUsed: configured, warnings };
 }
 
 /**
@@ -583,17 +644,24 @@ export function discover(config) {
   const warnings = [];
   const overrides = config.projects || {};
 
-  // 1. Scan FS (or skip if autoScan:false).
+  // 1. Scan FS (or skip if autoScan:false). `scanWithFallback` widens the
+  //    search when the configured depth finds nothing, and warns about it
+  //    instead of leaving an unexplained empty grid.
+  const depth = settings.scanDepth;
   let discovered = [];
+  let depthUsed = Math.max(1, Number(depth) || 1);
   if (settings.autoScan) {
-    discovered = scanFilesystem(settings.projectsRoot);
+    const scan = scanWithFallback(settings.projectsRoot, { depth });
+    discovered = scan.projects;
+    depthUsed = scan.depthUsed;
+    warnings.push(...scan.warnings);
   }
   const byId = new Map(discovered.map((p) => [p.id, p]));
 
   // If autoScan:false, only config-listed projects (that exist on disk) show.
   // We still need their on-disk detection, so scan-then-filter.
   if (!settings.autoScan) {
-    const all = scanFilesystem(settings.projectsRoot);
+    const all = scanWithFallback(settings.projectsRoot, { depth }).projects;
     const allById = new Map(all.map((p) => [p.id, p]));
     byId.clear();
     for (const id of Object.keys(overrides)) {
@@ -686,7 +754,7 @@ export function discover(config) {
     }
   }
 
-  return { projects: merged, warnings };
+  return { projects: merged, warnings, depthUsed };
 }
 
 /**
@@ -699,7 +767,7 @@ export function discover(config) {
  * @returns {object} full config object
  */
 export function seedConfig(settings) {
-  const discovered = scanFilesystem(settings.projectsRoot);
+  const discovered = scanWithFallback(settings.projectsRoot, { depth: settings.scanDepth }).projects;
   discovered.sort((a, b) => a.id.localeCompare(b.id)); // stable port assignment
   const { start, end } = settings.portRange;
 
