@@ -891,3 +891,75 @@ para este mismo caso hace muchas iteraciones; el guardián previo, nunca.
 9. **Los toasts duran 6 s incluso para «me rindo»**: un aviso que exige acción
    desaparece solo. Los de nivel `error` deberían quedarse hasta descartarlos.
 10. **Sin telemetría de adopción** más allá de las descargas de npm.
+
+---
+
+## Iteración 15 — 2026-08-13
+
+### Estado medido al empezar
+
+| Cosa | Medida |
+|---|---|
+| `main` | `10bc4d9` · 165 tests de servidor + 23 de frontend |
+| npm | **1.1.0** — 1.2.0 y 1.3.0 etiquetadas sin publicar |
+| CI / PRs / issues | 8 checks verdes · 0 · 0 · 1 estrella · audit 0 |
+
+### Dos puntos de la lista, corregidos con datos
+
+**«El escaneo síncrono bloquea» (#4).** Medido el bloqueo real del bucle de
+eventos: **21 proyectos → 14 ms** (con caché) / 37 ms en frío; 100 → 74/180 ms;
+300 → **205/599 ms**. Solo duele a partir de ~100 proyectos. El refactor a
+`fs.promises` toca descubrimiento, rutas, watcher y media batería, por un
+problema que hoy no tiene nadie: **aplazado con el umbral apuntado**, no
+descartado.
+
+**«`restart` bloquea hasta 8 s» (#5).** Medido tres veces: **307, 262, 310 ms**.
+Los 8 s eran el techo del timeout. **Punto retirado**: no había nada que
+arreglar.
+
+### Qué se cambió — [PR #30](https://github.com/JoniMartin27/launchpad/pull/30)
+
+Abrir en el editor **desde la tarjeta**; subproyectos abribles por su cuenta; y
+los toasts de **error esperan a que los descartes** (las noticias siguen
+caducando).
+
+**Fallo encontrado probando lo anterior:** `PATCH /api/config` construía un
+objeto de settings nuevo, pero launcher, rutas y warmer capturaron el viejo al
+arrancar — así que cambiar `editorCommand` o `autoRestartMax` en caliente **no
+hacía nada** hasta reiniciar, y parecía funcionar porque el fichero sí cambiaba.
+
+**Fallo MÍO, y grave:** la primera versión del test de configuración
+**sobrescribió el `config.json` real de la máquina** (`saveConfig` resuelve la
+ruta al cargar el módulo). Fichero reconstruido; el test ahora fija
+`MISSION_CONTROL_CONFIG` a un sandbox **antes de importar nada**, con un test
+que falla si `CONFIG_PATH` sale del sandbox. Y la suite completa se comprueba
+contra el fichero real: intacto.
+
+### Estado al terminar (medido)
+
+| Cosa | Medida |
+|---|---|
+| Tests | **169 de servidor + 27 de frontend** |
+| Mutantes | 5 muertos · **uno sobrevivió al primer intento** (hacer todos los toasts permanentes pasaba igual) y el test se reescribió |
+| CI | 8 checks verdes · Veredicto limpio |
+| En vivo | botón de la tarjeta abre el editor sin abrir el drawer · con `editorCommand` roto en caliente el aviso sale al instante **y sigue ahí a los 8 s** · start → 200 → stop → puerto libre |
+
+### Las 10 mejoras más potentes pendientes (orden de ataque)
+
+1. **npm sigue en 1.1.0 con dos versiones etiquetadas sin publicar.** Quince
+   iteraciones viven solo en GitHub.
+2. **Captura y GIF del README** son de junio: sin banda de avisos, sin botones
+   de lote, sin los de abrir, sin la marca de autoreinicio.
+3. **Los perfiles no se pueden crear desde la UI**, ni hay selector en la barra.
+4. **Docker Compose sigue sin lanzarse** (a propósito). Un `up`/`down` honesto.
+5. **`installState` asume npm/uv**: Go o Rust sin dependencias no ofrecen nada.
+6. **El escaneo síncrono**, si alguien llega a ~100 proyectos: `fs.promises` con
+   concurrencia acotada. Umbral medido en la it.15.
+7. **Ningún test arranca `index.js`**: los fallos de arranque (zona muerta
+   temporal en la it.6) solo los pilla la verificación manual.
+8. **`saveConfig` escribe donde diga el módulo**, no donde le pasen: cualquier
+   test que toque rutas de config puede volver a pisar el fichero real si
+   olvida el sandbox. Pasarle la ruta lo haría imposible por construcción.
+9. **Los avisos de descubrimiento y los de proyecto viven en sitios distintos**
+   (banda vs toasts) sin una regla clara de cuál va dónde.
+10. **Sin telemetría de adopción** más allá de las descargas de npm.
