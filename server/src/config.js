@@ -191,6 +191,14 @@ export function validateConfig(config) {
       if (p.env !== undefined && (typeof p.env !== 'object' || p.env === null)) {
         errors.push(`projects.${id}.env must be an object`);
       }
+      if (p.registry !== undefined) {
+        const r = p.registry;
+        const kindOk = r && ['npm', 'pypi', 'none'].includes(r.kind);
+        const nameOk = r && (r.kind === 'none' || (typeof r.name === 'string' && r.name.trim()));
+        if (!kindOk || !nameOk) {
+          errors.push(`projects.${id}.registry must be { kind: "npm"|"pypi"|"none", name } (name required unless kind is "none")`);
+        }
+      }
     }
   }
 
