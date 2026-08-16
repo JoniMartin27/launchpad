@@ -2,6 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@fervon/launchpad)](https://www.npmjs.com/package/@fervon/launchpad)
 ![License](https://img.shields.io/github/license/JoniMartin27/launchpad)
+[![homepage](https://img.shields.io/badge/homepage-fervon.dev%2Flaunchpad-FF6A00)](https://fervon.dev/launchpad/)
 
 > One folder, a dozen repos, one screen — no port collisions.
 
